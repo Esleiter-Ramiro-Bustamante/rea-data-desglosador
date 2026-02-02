@@ -3,22 +3,37 @@ from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.utils import get_column_letter
 import os
 import re
+import time
 
+# ==============================
 # Configuración inicial
-desktop_path = os.path.join(os.path.expanduser('~'), 'Desktop/GASTOS RESICO/2026/DICIEMBRE25')
+# ==============================
+
+desktop_path = os.path.join(
+    os.path.expanduser('~'),
+    'Desktop/GASTOS RESICO/2026/ENERO26'
+)
+
 file_name = input("Ingrese el nombre del archivo Excel (sin extensión .xlsx): ")
 
-# Limpiar y formatear el nombre del archivo
 file_name = file_name.strip()
 file_name = re.sub(r'\.xlsx$', '', file_name, flags=re.IGNORECASE) + '.xlsx'
 file_path = os.path.join(desktop_path, file_name)
 
+# Iniciar cronómetro
+tiempo_inicio = time.time()
+
+# ==============================
 # Estilos
+# ==============================
+
 blue_fill = PatternFill(start_color='00B0F0', end_color='00B0F0', fill_type='solid')
 green_fill = PatternFill(start_color='00FF00', end_color='00FF00', fill_type='solid')
 red_fill = PatternFill(start_color='FF0000', end_color='FF0000', fill_type='solid')
 purple_fill = PatternFill(start_color='800080', end_color='800080', fill_type='solid')
 orange_fill = PatternFill(start_color='FFA500', end_color='FFA500', fill_type='solid')
+yellow_fill = PatternFill(start_color='FFFF00', end_color='FFFF00', fill_type='solid')
+
 result_style = Font(bold=True)
 center_align = Alignment(horizontal='center')
 
@@ -27,40 +42,45 @@ center_align = Alignment(horizontal='center')
 # ==============================
 
 def extract_code(value):
+    """Extrae el código de un valor que puede contener formato 'CODIGO - Descripción'"""
     if value and '-' in str(value):
         return str(value).split('-')[0].strip()
     return str(value).strip() if value else ''
 
 def find_column(sheet, column_name):
-    """Busca una columna por nombre (case insensitive)"""
+    """Busca una columna por nombre en la primera fila"""
     for cell in sheet[1]:
         if cell.value and str(cell.value).strip().lower() == column_name.strip().lower():
             return cell.column
     return None
 
 def create_column_if_missing(sheet, column_name, fill_color=blue_fill):
-    """Crea una columna si no existe y devuelve su posición"""
+    """Crea una columna si no existe"""
     col = find_column(sheet, column_name)
     if col is None:
         last_col = sheet.max_column + 1
         sheet.cell(row=1, column=last_col, value=column_name)
         sheet.cell(row=1, column=last_col).fill = fill_color
         sheet.cell(row=1, column=last_col).alignment = center_align
-        print(f"✅ Columna creada: '{column_name}' en posición {get_column_letter(last_col)}")
+        print(f"✅ Columna creada: {column_name}")
         return last_col
     return col
 
 def es_gasolina(concepto):
-    """Determina si un concepto es de gasolina"""
-    palabras_gasolina = [
-        'gasolina', 'combustible', 'magna', 'premium', 'diesel', 'diésel',
-        'gasohol', 'gasoil', 'nafta', 'petrol', 'gas', 'energético'
-    ]
-    concepto = str(concepto).lower()
-    for palabra in palabras_gasolina:
-        if palabra in concepto:
-            return True
-    return False
+    """
+    Detecta si un concepto es relacionado a combustible/gasolina.
+    Según Art. 27 LISR: combustibles para vehículos marítimos, aéreos y terrestres
+    """
+    if not concepto:
+        return False
+    palabras = [
+        'gasolina', 'combustible', 'magna', 'premium',
+        'diesel', 'diésel', 'gasohol', 'gasoil',
+        'nafta', 'petrol', 'gas', 'energético',
+        'turbosina', 'jet fuel', 'bunker'
+]
+    concepto_lower = concepto.lower()
+    return any(p in concepto_lower for p in palabras)
 
 # ==============================
 # Reglas de deducibilidad
@@ -69,7 +89,9 @@ def es_gasolina(concepto):
 USOS_DEDUCIBLES = ['G01', 'G02', 'G03']
 METODOS_VALIDOS = ['PUE', 'PPD']
 FORMAS_VALIDAS = ['01', '02', '03', '04', '28']
+FORMAS_ELECTRONICAS = ['02', '03', '04', '28']
 USO_CFDI_VERDE = "G02 - Devoluciones, descuentos o bonificaciones"
+REGIMENES_FACILIDAD_COMBUSTIBLE = ['626']
 
 # ==============================
 # Abrir archivo Excel
@@ -78,9 +100,12 @@ USO_CFDI_VERDE = "G02 - Devoluciones, descuentos o bonificaciones"
 try:
     workbook = openpyxl.load_workbook(file_path)
     sheet = workbook.active
+    print(f"✅ Archivo cargado: {file_path}")
+    print(f"📊 Filas totales: {sheet.max_row - 1}")
 except Exception as e:
-    print(f"Error al abrir el archivo: {e}")
+    print(f"❌ Error al abrir el archivo: {e}")
     raise SystemExit(1)
+
 # ==============================
 # Columnas requeridas
 # ==============================
@@ -100,38 +125,37 @@ required_columns = {
     'Conceptos': 'Conceptos'
 }
 
-print("🔍 Buscando columnas requeridas...")
+print("🔍 Buscando / creando columnas base...")
 columns = {}
 
-# Crear columnas requeridas si no existen
 for key, col_name in required_columns.items():
     columns[key] = create_column_if_missing(sheet, col_name)
-    print(f"   {col_name}: Columna {get_column_letter(columns[key])}")
 
 # ==============================
-# Columnas IEPS (opcionales)
+# OPTIMIZACIÓN #1: Pre-indexar columnas IEPS
 # ==============================
+
+print("🚀 Optimizando búsquedas de columnas...")
 
 ieps_encontrado = False
 ieps_no_desglosado_encontrado = False
+columnas_ieps = []
 
-# IEPS Trasladado
-ieps_col = find_column(sheet, 'IEPS Trasladado')
-if ieps_col:
-    columns['IEPS Trasladado'] = ieps_col
-    ieps_encontrado = True
-    print("✅ Columna IEPS Trasladado encontrada")
-else:
-    print("⚠️  Advertencia: No se encontró la columna 'IEPS Trasladado'")
+for col in range(1, sheet.max_column + 1):
+    header = sheet.cell(row=1, column=col).value
+    if header and "IEPS" in str(header).upper():
+        columnas_ieps.append(col)
+        header_str = str(header).strip()
+        if 'No Desglosado' in header_str:
+            columns['IEPS Trasladado No Desglosado'] = col
+            ieps_no_desglosado_encontrado = True
+            print(f"✅ IEPS No Desglosado: {get_column_letter(col)}")
+        else:
+            columns['IEPS Trasladado'] = col
+            ieps_encontrado = True
+            print(f"✅ IEPS Trasladado: {get_column_letter(col)}")
 
-# IEPS Trasladado No Desglosado
-ieps_no_desglosado_col = find_column(sheet, 'IEPS Trasladado No Desglosado')
-if ieps_no_desglosado_col:
-    columns['IEPS Trasladado No Desglosado'] = ieps_no_desglosado_col
-    ieps_no_desglosado_encontrado = True
-    print("✅ Columna IEPS Trasladado No Desglosado encontrada")
-else:
-    print("⚠️  Advertencia: No se encontró la columna 'IEPS Trasladado No Desglosado'")
+print(f"⚡ {len(columnas_ieps)} columnas IEPS pre-indexadas")
 
 # ==============================
 # Columna Efecto (si existe)
@@ -139,26 +163,33 @@ else:
 
 efecto_col = find_column(sheet, 'Efecto')
 if efecto_col:
-    print(f"✅ Columna Efecto encontrada: {get_column_letter(efecto_col)}")
+    print(f"✅ Columna Efecto: {get_column_letter(efecto_col)}")
 
 # ==============================
-# Inicializar columnas numéricas nuevas
+# Crear columna de Razón No Deducible
 # ==============================
 
-print("📝 Inicializando columnas nuevas...")
+razon_no_ded_col = create_column_if_missing(sheet, 'Razón No Deducible', red_fill)
+
+# ==============================
+# Inicializar columnas numéricas
+# ==============================
+
+print("📝 Inicializando columnas numéricas...")
+
 for row in range(2, sheet.max_row + 1):
     for col_key in ['IVA Trasladado 16%', 'IVA Trasladado 0%', 'IVA Exento', 'Descuento']:
-        col_idx = columns[col_key]
-        cell = sheet.cell(row=row, column=col_idx)
+        cell = sheet.cell(row=row, column=columns[col_key])
         if cell.value is None:
             cell.value = 0
-            cell.number_format = "0.00"
+        cell.number_format = "0.00"
 
 # ==============================
 # Crear columnas de cálculo
 # ==============================
 
 last_column = sheet.max_column
+
 headers = [
     'SUB1-16%',
     'SUB0%',
@@ -171,11 +202,11 @@ headers = [
 ]
 
 print("🧮 Creando columnas de cálculo...")
+
 for i, header in enumerate(headers, start=1):
-    hcell = sheet.cell(row=1, column=last_column + i, value=header)
-    hcell.fill = blue_fill
-    hcell.alignment = center_align
-    print(f"   {header}: Columna {get_column_letter(last_column + i)}")
+    cell = sheet.cell(row=1, column=last_column + i, value=header)
+    cell.fill = blue_fill
+    cell.alignment = center_align
 
 sub1_col = last_column + 1
 sub0_col = last_column + 2
@@ -187,6 +218,25 @@ comprob_col = last_column + 7
 deducible_col = last_column + 8
 
 # ==============================
+# OPTIMIZACIÓN #2: Cachear letras de columnas
+# ==============================
+
+print("📝 Cacheando referencias de columnas...")
+
+col_letters = {
+    'SubTotal': get_column_letter(columns['SubTotal']),
+    'Descuento': get_column_letter(columns['Descuento']),
+    'IVA16': get_column_letter(columns['IVA Trasladado 16%']),
+    'IVA0': get_column_letter(columns['IVA Trasladado 0%']),
+    'Total': get_column_letter(columns['Total']),
+    'sub1': get_column_letter(sub1_col),
+    'sub0': get_column_letter(sub0_col),
+    'sub2': get_column_letter(sub2_col),
+    'iva_acred': get_column_letter(iva_acred_col),
+    't2': get_column_letter(t2_col),
+}
+
+# ==============================
 # Variables de control
 # ==============================
 
@@ -195,144 +245,166 @@ ieps_no_desglosado_procesados = 0
 gasolina_con_ieps = 0
 gasolina_sin_ieps = 0
 uso_s01_count = 0
-
-# 🔴 CONTADOR BUG EFECTIVO > 2000
 efectivo_mayor_2000 = 0
+gasolina_efectivo = 0
+gasolina_electronico = 0
 
-print("🔧 Procesando filas...")
+print("🔧 Iniciando procesamiento optimizado de filas...")
+print("=" * 80)
+
 # ==============================
-# Procesar filas
+# LOOP PRINCIPAL OPTIMIZADO
 # ==============================
+
+total_filas = sheet.max_row - 1
 
 for row in range(2, sheet.max_row + 1):
-
-    concepto = str(sheet.cell(row=row, column=columns['Conceptos']).value or '')
-    iva0_val = sheet.cell(row=row, column=columns['IVA Trasladado 0%']).value or 0
-    iva_exento_val = sheet.cell(row=row, column=columns['IVA Exento']).value or 0
-    iva16_val = sheet.cell(row=row, column=columns['IVA Trasladado 16%']).value or 0
-    total_val = sheet.cell(row=row, column=columns['Total']).value or 0
-    uso_cfdi_r = sheet.cell(row=row, column=columns['Uso CFDI']).value
-
-    # ------------------------------
-    # Detección gasolina
-    # ------------------------------
-    es_gasolina_concepto = es_gasolina(concepto)
-
+    
+    # Mostrar progreso cada 100 filas
+    if (row - 1) % 100 == 0 or row == sheet.max_row:
+        progreso = ((row - 1) / total_filas) * 100
+        print(f"📊 Procesando: {row - 1}/{total_filas} facturas ({progreso:.1f}%)")
+    
+    # ==============================
+    # OPTIMIZACIÓN #4: Leer todas las celdas necesarias UNA VEZ
+    # ==============================
+    
+    row_data = {
+        'concepto': str(sheet.cell(row=row, column=columns['Conceptos']).value or ''),
+        'total': float(sheet.cell(row=row, column=columns['Total']).value or 0),
+        'subtotal': float(sheet.cell(row=row, column=columns['SubTotal']).value or 0),
+        'descuento': float(sheet.cell(row=row, column=columns['Descuento']).value or 0),
+        'iva16': float(sheet.cell(row=row, column=columns['IVA Trasladado 16%']).value or 0),
+        'iva0': float(sheet.cell(row=row, column=columns['IVA Trasladado 0%']).value or 0),
+        'uso_cfdi': sheet.cell(row=row, column=columns['Uso CFDI']).value,
+        'metodo_pago': sheet.cell(row=row, column=columns['Metodo pago']).value,
+        'forma_pago': sheet.cell(row=row, column=columns['Forma pago']).value,
+        'regimen': sheet.cell(row=row, column=columns['Regimen receptor']).value,
+    }
+    
+    # Detección de gasolina (una sola vez)
+    es_gasolina_concepto = es_gasolina(row_data['concepto'])
+    
+    # ==============================
+    # Buscar IEPS (OPTIMIZADO)
+    # ==============================
+    
     tiene_ieps = False
     tiene_ieps_no_desglosado = False
-
-    if ieps_encontrado:
-        ieps_val = sheet.cell(row=row, column=columns['IEPS Trasladado']).value
-        if ieps_val not in (None, 0, ''):
-            tiene_ieps = True
-
-    if ieps_no_desglosado_encontrado:
-        ieps_nd_val = sheet.cell(row=row, column=columns['IEPS Trasladado No Desglosado']).value
-        if ieps_nd_val not in (None, 0, ''):
-            tiene_ieps_no_desglosado = True
-
+    
+    if columnas_ieps:  # Solo si hay columnas IEPS
+        for col in columnas_ieps:  # Solo recorre 1-3 columnas
+            ieps_val = sheet.cell(row=row, column=col).value
+            if ieps_val not in (None, 0, ''):
+                header = sheet.cell(row=1, column=col).value
+                if 'No Desglosado' in str(header):
+                    tiene_ieps_no_desglosado = True
+                else:
+                    tiene_ieps = True
+    
+    # Marcar gasolina
     if es_gasolina_concepto:
-        concepto_cell = sheet.cell(row=row, column=columns['Conceptos'])
+        cel = sheet.cell(row=row, column=columns['Conceptos'])
         if tiene_ieps or tiene_ieps_no_desglosado:
-            concepto_cell.fill = blue_fill
+            cel.fill = blue_fill
             gasolina_con_ieps += 1
         else:
-            concepto_cell.fill = orange_fill
+            cel.fill = orange_fill
             gasolina_sin_ieps += 1
-
-    # ------------------------------
+    
+    # ==============================
+    # Cálculos usando fórmulas con letras cacheadas
+    # ==============================
+    
     # SUB1-16%
-    # ------------------------------
-    sheet.cell(row=row, column=sub1_col).value = f"=({get_column_letter(columns['SubTotal'])}{row}-{get_column_letter(columns['Descuento'])}{row})"
+    sheet.cell(
+        row=row,
+        column=sub1_col,
+        value=f"=({col_letters['SubTotal']}{row}-{col_letters['Descuento']}{row})"
+    )
     sheet.cell(row=row, column=sub1_col).number_format = "0.00"
     sheet.cell(row=row, column=sub1_col).font = result_style
-
-    # ------------------------------
+    
     # IEPS -> IVA 0% (SOLO GASOLINA)
-    # ------------------------------
-    if es_gasolina_concepto and (ieps_encontrado or ieps_no_desglosado_encontrado):
-        for col in range(1, sheet.max_column + 1):
-            header = sheet.cell(row=1, column=col).value
-            if header and "IEPS" in str(header).upper():
-                ieps_val = sheet.cell(row=row, column=col).value
-                if ieps_val not in (None, 0, ''):
-                    sheet.cell(row=row, column=columns['IVA Trasladado 0%']).value = ieps_val
-                    sheet.cell(row=row, column=columns['IVA Trasladado 0%']).fill = orange_fill
-                    ieps_procesados += 1
-
-    # ------------------------------
+    if es_gasolina_concepto and columnas_ieps:
+        for col in columnas_ieps:
+            ieps_val = sheet.cell(row=row, column=col).value
+            if ieps_val not in (None, 0, ''):
+                sheet.cell(row=row, column=columns['IVA Trasladado 0%'], value=ieps_val)
+                sheet.cell(row=row, column=columns['IVA Trasladado 0%']).fill = orange_fill
+                ieps_procesados += 1
+                break
+    
     # SUB0%
-    # ------------------------------
-    sheet.cell(row=row, column=sub0_col).value = f"={get_column_letter(columns['IVA Trasladado 0%'])}{row}"
+    sheet.cell(row=row, column=sub0_col, value=f"={col_letters['IVA0']}{row}")
     sheet.cell(row=row, column=sub0_col).number_format = "0.00"
     sheet.cell(row=row, column=sub0_col).font = result_style
-
-    # ------------------------------
-    # SUB2-16%
-    # ------------------------------
-    sheet.cell(row=row, column=sub2_col).value = f"={get_column_letter(sub1_col)}{row}-{get_column_letter(sub0_col)}{row}"
+    
+    # SUB2-16% con lógica IEPS 8%
+    ieps8_val = 0.0
+    if not es_gasolina_concepto and ieps_encontrado:
+        ieps8_val = float(sheet.cell(row=row, column=columns['IEPS Trasladado']).value or 0)
+    
+    sub1_calc = row_data['subtotal'] - row_data['descuento']
+    sub2_calc = sub1_calc - row_data['iva0']
+    
+    if ieps8_val > 0 and sub2_calc < 0:
+        sub2_final = sub1_calc + ieps8_val
+    elif ieps8_val == 0 and sub2_calc == 0:
+        sub2_final = sub1_calc
+    else:
+        sub2_final = sub2_calc
+    
+    sheet.cell(row=row, column=sub2_col, value=sub2_final)
     sheet.cell(row=row, column=sub2_col).number_format = "0.00"
     sheet.cell(row=row, column=sub2_col).font = result_style
-
-    # ------------------------------
-    # IVA acreditable
-    # ------------------------------
-    sheet.cell(row=row, column=iva_acred_col).value = f"={get_column_letter(sub2_col)}{row}*0.16"
+    
+    # IVA ACREDITABLE 16%
+    iva_acred = round(sub2_final * 0.16, 2)
+    if ieps8_val == 0 and sub2_final == sub1_calc:
+        iva_acred = row_data['iva16']
+    
+    sheet.cell(row=row, column=iva_acred_col, value=iva_acred)
     sheet.cell(row=row, column=iva_acred_col).number_format = "0.00"
     sheet.cell(row=row, column=iva_acred_col).font = result_style
     
-    # ==============================
-    # 🔍 COMPROBACIÓN: IVA TRASLADADO 16% == IVA ACREDITABLE 16%
-    # (Cálculo en Python, NO lectura de fórmula)
-    # ==============================
-    try:
-        subtotal_val = float(sheet.cell(row=row, column=columns['SubTotal']).value or 0)
-        descuento_val = float(sheet.cell(row=row, column=columns['Descuento']).value or 0)
-        iva0_val_num = float(sheet.cell(row=row, column=columns['IVA Trasladado 0%']).value or 0)
-        iva16_tras_val = float(sheet.cell(row=row, column=columns['IVA Trasladado 16%']).value or 0)
-
-        # Recalcular base 16%
-        sub1_val = subtotal_val - descuento_val
-        sub2_val = sub1_val - iva0_val_num
-
-        iva_acred_calc = round(sub2_val * 0.16, 2)
-        iva16_tras_val = round(iva16_tras_val, 2)
-
-        # Comparar con tolerancia
-        if abs(iva_acred_calc - iva16_tras_val) < 0.01:
-            sheet.cell(row=row, column=columns['IVA Trasladado 16%']).fill = green_fill
-            sheet.cell(row=row, column=iva_acred_col).fill = green_fill
-
-    except Exception:
-        pass
-
-
-
-    # ------------------------------
+    if abs(iva_acred - row_data['iva16']) < 0.01:
+        sheet.cell(row=row, column=iva_acred_col).fill = green_fill
+        sheet.cell(row=row, column=columns['IVA Trasladado 16%']).fill = green_fill
+    
     # C IVA
-    # ------------------------------
-    sheet.cell(row=row, column=c_iva_col).value = f"={get_column_letter(iva_acred_col)}{row}-{get_column_letter(columns['IVA Trasladado 16%'])}{row}"
+    sheet.cell(
+        row=row,
+        column=c_iva_col,
+        value=f"={col_letters['iva_acred']}{row}-{col_letters['IVA16']}{row}"
+    )
     sheet.cell(row=row, column=c_iva_col).number_format = "0.00"
     sheet.cell(row=row, column=c_iva_col).font = result_style
-
-    # ------------------------------
+    
     # T2
-    # ------------------------------
-    sheet.cell(row=row, column=t2_col).value = f"={get_column_letter(sub2_col)}{row}+{get_column_letter(sub0_col)}{row}+{get_column_letter(columns['IVA Trasladado 16%'])}{row}"
+    sheet.cell(
+        row=row,
+        column=t2_col,
+        value=f"={col_letters['sub2']}{row}+{col_letters['sub0']}{row}+{col_letters['IVA16']}{row}"
+    )
     sheet.cell(row=row, column=t2_col).number_format = "0.00"
     sheet.cell(row=row, column=t2_col).font = result_style
-
-    # ------------------------------
+    
     # Comprobación T2
-    # ------------------------------
-    sheet.cell(row=row, column=comprob_col).value = f"={get_column_letter(columns['Total'])}{row}-{get_column_letter(t2_col)}{row}"
+    sheet.cell(
+        row=row,
+        column=comprob_col,
+        value=f"={col_letters['Total']}{row}-{col_letters['t2']}{row}"
+    )
     sheet.cell(row=row, column=comprob_col).number_format = "0.00"
     sheet.cell(row=row, column=comprob_col).font = result_style
-
-    # ------------------------------
-    # Régimen receptor
-    # ------------------------------
-    regimen = extract_code(sheet.cell(row=row, column=columns['Regimen receptor']).value)
+    
+    # ==============================
+    # Formateo y validaciones
+    # ==============================
+    
+    regimen = extract_code(row_data['regimen'])
+    
     if regimen == '626':
         sheet.cell(row=row, column=columns['Regimen receptor']).fill = blue_fill
     elif regimen == '612':
@@ -340,68 +412,101 @@ for row in range(2, sheet.max_row + 1):
     else:
         sheet.cell(row=row, column=columns['Regimen receptor']).fill = orange_fill
         sheet.cell(row=row, column=columns['Razon emisor']).fill = orange_fill
-
-    # ------------------------------
-    # Uso CFDI
-    # ------------------------------
-    uso_cfdi_codigo = extract_code(uso_cfdi_r).upper() if uso_cfdi_r else ''
-    if uso_cfdi_r and str(uso_cfdi_r).strip() == USO_CFDI_VERDE:
+    
+    uso_cfdi = extract_code(row_data['uso_cfdi']).upper() if row_data['uso_cfdi'] else ''
+    
+    if row_data['uso_cfdi'] and str(row_data['uso_cfdi']).strip() == USO_CFDI_VERDE:
         sheet.cell(row=row, column=columns['Uso CFDI']).fill = green_fill
-    if uso_cfdi_codigo == 'S01':
+    
+    if uso_cfdi == 'S01':
         sheet.cell(row=row, column=columns['Uso CFDI']).fill = red_fill
         uso_s01_count += 1
-
-    # ------------------------------
-    # Efecto
-    # ------------------------------
+    
     es_egreso = False
     if efecto_col:
         efecto_val = sheet.cell(row=row, column=efecto_col).value
         if efecto_val and str(efecto_val).strip().upper() in ['EGRESO', 'E']:
             es_egreso = True
-
-    # ------------------------------
-    # BUG FIX: EFECTIVO > $2,000
-    # ------------------------------
-    metodo_pg = extract_code(sheet.cell(row=row, column=columns['Metodo pago']).value).upper()
-    forma_pg = extract_code(sheet.cell(row=row, column=columns['Forma pago']).value).strip().upper()
-
-    efectivo_mayor_2000_flag = False
-    if forma_pg == '01' and total_val > 2000:
-        efectivo_mayor_2000_flag = True
-        efectivo_mayor_2000 += 1
-
-    # ------------------------------
-    # Deducibilidad FINAL
-    # ------------------------------
-    uso_cfdi = extract_code(uso_cfdi_r).upper() if uso_cfdi_r else ''
-
-    es_deducible = (
-        uso_cfdi in USOS_DEDUCIBLES and
-        metodo_pg in METODOS_VALIDOS and
-        forma_pg in FORMAS_VALIDAS and
-        not efectivo_mayor_2000_flag
-    )
-
+    
+    # ==============================
+    # VALIDACIÓN DE DEDUCIBILIDAD
+    # ==============================
+    
+    metodo_pg = extract_code(row_data['metodo_pago']).upper()
+    forma_pg = extract_code(row_data['forma_pago']).upper()
+    
+    es_deducible = True
+    razones_rechazo = []
+    
+    if uso_cfdi not in USOS_DEDUCIBLES:
+        es_deducible = False
+        razones_rechazo.append(f"Uso CFDI {uso_cfdi} no deducible")
+    
+    if metodo_pg not in METODOS_VALIDOS:
+        es_deducible = False
+        razones_rechazo.append(f"Método {metodo_pg} inválido")
+    
+    # VALIDACIÓN GASOLINA
+    if es_gasolina_concepto:
+        if forma_pg == '01':
+            if regimen in REGIMENES_FACILIDAD_COMBUSTIBLE and row_data['total'] <= 2000:
+                gasolina_efectivo += 1
+                sheet.cell(row=row, column=columns['Forma pago']).fill = yellow_fill
+                razones_rechazo.append("RESICO: Gasolina efectivo ≤$2,000 (facilidad)")
+            else:
+                es_deducible = False
+                gasolina_efectivo += 1
+                razones_rechazo.append("Gasolina NO deducible en efectivo")
+                sheet.cell(row=row, column=columns['Forma pago']).fill = red_fill
+        else:
+            gasolina_electronico += 1
+            if forma_pg not in FORMAS_ELECTRONICAS:
+                es_deducible = False
+                razones_rechazo.append(f"Gasolina: forma de pago {forma_pg} inválida")
+    else:
+        if forma_pg == '01' and row_data['total'] > 2000:
+            es_deducible = False
+            efectivo_mayor_2000 += 1
+            razones_rechazo.append("Efectivo >$2,000 NO deducible")
+            if efecto_col:
+                sheet.cell(row=row, column=efecto_col).fill = red_fill
+        elif forma_pg not in FORMAS_VALIDAS:
+            es_deducible = False
+            razones_rechazo.append(f"Forma de pago {forma_pg} inválida")
+    
+    # Escribir resultado
     ded_cell = sheet.cell(row=row, column=deducible_col, value="SI" if es_deducible else "NO")
+    
     if es_deducible:
         ded_cell.fill = blue_fill if es_egreso else green_fill
     else:
         ded_cell.fill = red_fill
+    
     ded_cell.font = Font(bold=True, color='FFFFFF')
     ded_cell.alignment = center_align
-
-    if efectivo_mayor_2000_flag:
-        ded_cell.fill = red_fill
-        if efecto_col:
-            sheet.cell(row=row, column=efecto_col).fill = red_fill
+    
+    razon_cell = sheet.cell(row=row, column=razon_no_ded_col)
+    if razones_rechazo:
+        razon_cell.value = " | ".join(razones_rechazo)
+        if not es_deducible:
+            razon_cell.fill = red_fill
+            razon_cell.font = Font(bold=True, color='FFFFFF')
+        else:
+            razon_cell.fill = yellow_fill
+            razon_cell.font = Font(bold=True)
+    else:
+        razon_cell.value = "Cumple requisitos"
+        razon_cell.fill = green_fill
+        razon_cell.font = Font(color='006100')
 
 # ==============================
-# Ajustar ancho columnas
+# Ajustar ancho de columnas
 # ==============================
 
 for col in range(last_column + 1, last_column + len(headers) + 1):
     sheet.column_dimensions[get_column_letter(col)].width = 15
+
+sheet.column_dimensions[get_column_letter(razon_no_ded_col)].width = 40
 
 # ==============================
 # Guardar archivo
@@ -411,32 +516,39 @@ try:
     base_name = re.sub(r'\.xlsx$', '', file_name, flags=re.IGNORECASE)
     output_name = os.path.join(desktop_path, f"{base_name}_validado.xlsx")
     workbook.save(output_name)
+    
+    tiempo_fin = time.time()
+    tiempo_total = tiempo_fin - tiempo_inicio
+    velocidad = total_filas / tiempo_total if tiempo_total > 0 else 0
 
     print("\n" + "=" * 80)
     print("✅ PROCESO COMPLETADO EXITOSAMENTE")
     print("=" * 80)
     print(f"📂 Archivo guardado como: {output_name}")
-    print(f"📊 Total de filas procesadas: {sheet.max_row - 1}")
+    print(f"📊 Total de filas procesadas: {total_filas}")
+    print(f"⏱️  Tiempo total: {tiempo_total:.2f} segundos")
+    print(f"⚡ Velocidad: {velocidad:.0f} facturas/segundo")
 
-    print("\n🎨 FORMATOS APLICADOS:")
-    print("  • Régimen 626: AZUL")
-    print("  • Régimen 612: MORADO")
-    print("  • Otros regímenes: NARANJA")
-    print("  • Uso CFDI G02: VERDE")
-    print("  • Uso CFDI S01: ROJO")
-    print("  • Deducible egreso: AZUL")
-    print("  • Deducible otros: VERDE")
-    print("  • No deducible / Efectivo > $2,000: ROJO")
-
+    print("\n📌 RESUMEN DE VALIDACIÓN:")
     print(f"  • IEPS Trasladado procesados: {ieps_procesados}")
     print(f"  • IEPS No Desglosado procesados: {ieps_no_desglosado_procesados}")
     print(f"  • Gasolina con IEPS: {gasolina_con_ieps}")
     print(f"  • Gasolina sin IEPS: {gasolina_sin_ieps}")
-    print(f"  • Usos S01: {uso_s01_count}")
-    print(f"  • Efectivo > $2,000: {efectivo_mayor_2000}")
+    print(f"  • Gasolina pagada en efectivo: {gasolina_efectivo}")
+    print(f"  • Gasolina pagada electrónicamente: {gasolina_electronico}")
+    print(f"  • Usos S01 (sin efectos fiscales): {uso_s01_count}")
+    print(f"  • Gastos normales efectivo >$2,000: {efectivo_mayor_2000}")
+
+    print("\n⚠️  REGLAS APLICADAS:")
+    print("  1. Art. 27, fracc. III LISR: Efectivo >$2,000 NO deducible")
+    print("  2. Art. 27, fracc. III LISR: Gasolina NUNCA en efectivo")
+    print("     (Excepción: RESICO hasta $2,000)")
+    print("  3. Uso CFDI válido: G01, G02, G03")
+    print("  4. Método de pago válido: PUE, PPD")
+    print("  5. Forma de pago válida según tipo de gasto")
 
     print("=" * 80)
 
 except Exception as e:
-    print(f"\n❌ Error al guardar el archivo: {e}")
-
+    print("\n❌ Error al guardar el archivo:")
+    print(e)
