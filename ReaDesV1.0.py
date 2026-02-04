@@ -78,7 +78,7 @@ def es_gasolina(concepto):
         'diesel', 'diésel', 'gasohol', 'gasoil',
         'nafta', 'petrol', 'gas', 'energético',
         'turbosina', 'jet fuel', 'bunker'
-]
+    ]
     concepto_lower = concepto.lower()
     return any(p in concepto_lower for p in palabras)
 
@@ -272,10 +272,6 @@ for row in range(2, sheet.max_row + 1):
     row_data = {
         'concepto': str(sheet.cell(row=row, column=columns['Conceptos']).value or ''),
         'total': float(sheet.cell(row=row, column=columns['Total']).value or 0),
-        'subtotal': float(sheet.cell(row=row, column=columns['SubTotal']).value or 0),
-        'descuento': float(sheet.cell(row=row, column=columns['Descuento']).value or 0),
-        'iva16': float(sheet.cell(row=row, column=columns['IVA Trasladado 16%']).value or 0),
-        'iva0': float(sheet.cell(row=row, column=columns['IVA Trasladado 0%']).value or 0),
         'uso_cfdi': sheet.cell(row=row, column=columns['Uso CFDI']).value,
         'metodo_pago': sheet.cell(row=row, column=columns['Metodo pago']).value,
         'forma_pago': sheet.cell(row=row, column=columns['Forma pago']).value,
@@ -313,10 +309,10 @@ for row in range(2, sheet.max_row + 1):
             gasolina_sin_ieps += 1
     
     # ==============================
-    # Cálculos usando fórmulas con letras cacheadas
+    # TODAS LAS FÓRMULAS (NO VALORES)
     # ==============================
     
-    # SUB1-16%
+    # SUB1-16% = SubTotal - Descuento
     sheet.cell(
         row=row,
         column=sub1_col,
@@ -335,44 +331,53 @@ for row in range(2, sheet.max_row + 1):
                 ieps_procesados += 1
                 break
     
-    # SUB0%
-    sheet.cell(row=row, column=sub0_col, value=f"={col_letters['IVA0']}{row}")
+    # SUB0% = IVA 0%
+    sheet.cell(
+        row=row,
+        column=sub0_col,
+        value=f"={col_letters['IVA0']}{row}"
+    )
     sheet.cell(row=row, column=sub0_col).number_format = "0.00"
     sheet.cell(row=row, column=sub0_col).font = result_style
     
-    # SUB2-16% con lógica IEPS 8%
-    ieps8_val = 0.0
-    if not es_gasolina_concepto and ieps_encontrado:
-        ieps8_val = float(sheet.cell(row=row, column=columns['IEPS Trasladado']).value or 0)
-    
-    sub1_calc = row_data['subtotal'] - row_data['descuento']
-    sub2_calc = sub1_calc - row_data['iva0']
-    
-    if ieps8_val > 0 and sub2_calc < 0:
-        sub2_final = sub1_calc + ieps8_val
-    elif ieps8_val == 0 and sub2_calc == 0:
-        sub2_final = sub1_calc
-    else:
-        sub2_final = sub2_calc
-    
-    sheet.cell(row=row, column=sub2_col, value=sub2_final)
+    # ✅ SUB2-16% = SUB1 - SUB0 (SIEMPRE FÓRMULA)
+    sheet.cell(
+        row=row,
+        column=sub2_col,
+        value=f"={col_letters['sub1']}{row}-{col_letters['sub0']}{row}"
+    )
     sheet.cell(row=row, column=sub2_col).number_format = "0.00"
     sheet.cell(row=row, column=sub2_col).font = result_style
     
-    # IVA ACREDITABLE 16%
-    iva_acred = round(sub2_final * 0.16, 2)
-    if ieps8_val == 0 and sub2_final == sub1_calc:
-        iva_acred = row_data['iva16']
-    
-    sheet.cell(row=row, column=iva_acred_col, value=iva_acred)
+    # ✅ IVA ACREDITABLE 16% = SUB2 * 0.16 (SIEMPRE FÓRMULA)
+    sheet.cell(
+        row=row,
+        column=iva_acred_col,
+        value=f"={col_letters['sub2']}{row}*0.16"
+    )
     sheet.cell(row=row, column=iva_acred_col).number_format = "0.00"
     sheet.cell(row=row, column=iva_acred_col).font = result_style
     
-    if abs(iva_acred - row_data['iva16']) < 0.01:
-        sheet.cell(row=row, column=iva_acred_col).fill = green_fill
-        sheet.cell(row=row, column=columns['IVA Trasladado 16%']).fill = green_fill
+    # Validación visual (calcular para comparar)
+    # Solo para el formato de colores, NO para escribir el valor
+    try:
+        # Leer los valores calculados por Excel
+        subtotal_val = float(sheet.cell(row=row, column=columns['SubTotal']).value or 0)
+        descuento_val = float(sheet.cell(row=row, column=columns['Descuento']).value or 0)
+        iva0_val = float(sheet.cell(row=row, column=columns['IVA Trasladado 0%']).value or 0)
+        iva16_val = float(sheet.cell(row=row, column=columns['IVA Trasladado 16%']).value or 0)
+        
+        sub1_calc = subtotal_val - descuento_val
+        sub2_calc = sub1_calc - iva0_val
+        iva_acred_calc = round(sub2_calc * 0.16, 2)
+        
+        if abs(iva_acred_calc - iva16_val) < 0.01:
+            sheet.cell(row=row, column=iva_acred_col).fill = green_fill
+            sheet.cell(row=row, column=columns['IVA Trasladado 16%']).fill = green_fill
+    except:
+        pass  # Si hay error en el cálculo, no aplicar color
     
-    # C IVA
+    # C IVA = IVA Acreditable - IVA 16%
     sheet.cell(
         row=row,
         column=c_iva_col,
@@ -381,7 +386,7 @@ for row in range(2, sheet.max_row + 1):
     sheet.cell(row=row, column=c_iva_col).number_format = "0.00"
     sheet.cell(row=row, column=c_iva_col).font = result_style
     
-    # T2
+    # T2 = SUB2 + SUB0 + IVA16
     sheet.cell(
         row=row,
         column=t2_col,
@@ -390,7 +395,7 @@ for row in range(2, sheet.max_row + 1):
     sheet.cell(row=row, column=t2_col).number_format = "0.00"
     sheet.cell(row=row, column=t2_col).font = result_style
     
-    # Comprobación T2
+    # Comprobación T2 = Total - T2
     sheet.cell(
         row=row,
         column=comprob_col,
