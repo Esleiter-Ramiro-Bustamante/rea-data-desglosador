@@ -278,9 +278,11 @@ Desarrollado para la comunidad fiscal de México.
 
 ## 🙏 Agradecimientos
 
-- Anthropic Claude por asistencia en desarrollo
+- Esleiter Ramiro Bustamante Ataxca
+- CP.Angelica Chagala Sixtega
 - Comunidad fiscal mexicana
-- Contribuidores del proyecto
+- Anthropic Claude por asistencia en desarrollo
+
 
 ---
 
