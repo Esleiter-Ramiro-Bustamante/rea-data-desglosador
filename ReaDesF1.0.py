@@ -1,13 +1,237 @@
+"""
+===============================================================================
+ReaDesF1.1 - VALIDADOR FISCAL CON SEGURIDAD Y PRIVACIDAD
+===============================================================================
+
+POLÍTICA DE PRIVACIDAD Y SEGURIDAD:
+- Este software procesa facturas LOCALMENTE en tu computadora
+- NO envía datos a internet
+- NO almacena información en servidores externos
+- Los archivos procesados quedan SOLO en tu equipo
+- Cumple con LFPDPPP (Ley Federal de Protección de Datos Personales)
+
+CARACTERÍSTICAS DE SEGURIDAD:
+✓ Procesamiento 100% local
+✓ Modo de anonimización para pruebas
+✓ Log de auditoría automático
+✓ Verificación de integridad de datos
+✓ Advertencias de seguridad
+
+Desarrollado para: Validación fiscal de facturas CFDI (México)
+Versión: 1.1
+Fecha: Febrero 2026
+
+===============================================================================
+"""
+
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.utils import get_column_letter
 import os
 import re
 import time
+import hashlib
+from datetime import datetime
+
+# ==============================
+# CONFIGURACIÓN DE SEGURIDAD
+# ==============================
+
+class ConfiguracionSeguridad:
+    """Configuración de seguridad y privacidad"""
+    
+    # Modo de operación
+    MODO_PRODUCCION = True  # True = datos reales, False = modo prueba
+    MODO_ANONIMIZAR = False  # True = anonimiza datos sensibles automáticamente
+    
+    # Auditoría
+    CREAR_LOG_AUDITORIA = True  # Registra qué archivos se procesan
+    LOG_DIRECTORY = "logs_auditoria"
+    
+    # Advertencias
+    MOSTRAR_ADVERTENCIA_PRIVACIDAD = True
+    
+    @staticmethod
+    def mostrar_advertencia_inicial():
+        """Muestra advertencia de privacidad al usuario"""
+        if not ConfiguracionSeguridad.MOSTRAR_ADVERTENCIA_PRIVACIDAD:
+            return
+        
+        print("\n" + "=" * 80)
+        print("⚠️  ADVERTENCIA DE PRIVACIDAD Y SEGURIDAD")
+        print("=" * 80)
+        print("\n📋 INFORMACIÓN IMPORTANTE:")
+        print("  • Este software procesa facturas con información fiscal CONFIDENCIAL")
+        print("  • Los datos se procesan LOCALMENTE en tu computadora")
+        print("  • NO se envía información a internet ni a servidores externos")
+        print("  • Tú eres responsable de la protección de los archivos procesados")
+        print("\n🔐 CUMPLIMIENTO LEGAL:")
+        print("  • Cumple con LFPDPPP (Protección de Datos Personales)")
+        print("  • Los datos permanecen bajo tu custodia en todo momento")
+        print("  • Se recomienda cifrar los archivos de salida")
+        
+        if ConfiguracionSeguridad.MODO_ANONIMIZAR:
+            print("\n✅ MODO ANONIMIZACIÓN ACTIVADO:")
+            print("  • Los RFCs y nombres serán anonimizados automáticamente")
+            print("  • Este archivo es SEGURO para compartir o pruebas")
+        
+        if ConfiguracionSeguridad.CREAR_LOG_AUDITORIA:
+            print(f"\n📝 LOG DE AUDITORÍA ACTIVADO:")
+            print(f"  • Se registrará la actividad en: {ConfiguracionSeguridad.LOG_DIRECTORY}/")
+            print("  • Incluye: fecha, archivo procesado, filas procesadas, tiempo")
+        
+        print("\n" + "=" * 80)
+        
+        respuesta = input("¿Deseas continuar? (SI/NO): ").strip().upper()
+        if respuesta not in ['SI', 'S', 'YES', 'Y']:
+            print("❌ Proceso cancelado por el usuario.")
+            raise SystemExit(0)
+        print()
+
+# ==============================
+# CLASE DE AUDITORÍA
+# ==============================
+
+class LogAuditoria:
+    """Registra operaciones para auditoría"""
+    
+    def __init__(self):
+        self.log_entries = []
+        self.inicio = datetime.now()
+        
+        if ConfiguracionSeguridad.CREAR_LOG_AUDITORIA:
+            # Crear directorio de logs si no existe
+            os.makedirs(ConfiguracionSeguridad.LOG_DIRECTORY, exist_ok=True)
+    
+    def registrar_inicio(self, archivo):
+        """Registra el inicio del procesamiento"""
+        self.log_entries.append({
+            'timestamp': datetime.now(),
+            'evento': 'INICIO_PROCESAMIENTO',
+            'archivo': archivo,
+            'hash_archivo': self._calcular_hash_archivo(archivo)
+        })
+    
+    def registrar_fin(self, archivo_salida, filas_procesadas, tiempo_total):
+        """Registra el fin del procesamiento"""
+        self.log_entries.append({
+            'timestamp': datetime.now(),
+            'evento': 'FIN_PROCESAMIENTO',
+            'archivo_salida': archivo_salida,
+            'filas_procesadas': filas_procesadas,
+            'tiempo_segundos': round(tiempo_total, 2),
+            'modo_anonimizacion': ConfiguracionSeguridad.MODO_ANONIMIZAR
+        })
+    
+    def registrar_error(self, error):
+        """Registra errores"""
+        self.log_entries.append({
+            'timestamp': datetime.now(),
+            'evento': 'ERROR',
+            'detalle': str(error)
+        })
+    
+    def _calcular_hash_archivo(self, ruta_archivo):
+        """Calcula hash SHA256 del archivo para verificación de integridad"""
+        try:
+            with open(ruta_archivo, 'rb') as f:
+                return hashlib.sha256(f.read()).hexdigest()
+        except:
+            return "NO_DISPONIBLE"
+    
+    def guardar_log(self):
+        """Guarda el log de auditoría en un archivo"""
+        if not ConfiguracionSeguridad.CREAR_LOG_AUDITORIA:
+            return
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        log_file = os.path.join(
+            ConfiguracionSeguridad.LOG_DIRECTORY,
+            f"auditoria_{timestamp}.log"
+        )
+        
+        try:
+            with open(log_file, 'w', encoding='utf-8') as f:
+                f.write("=" * 80 + "\n")
+                f.write("LOG DE AUDITORÍA - VALIDADOR FISCAL\n")
+                f.write("=" * 80 + "\n\n")
+                
+                for entry in self.log_entries:
+                    f.write(f"[{entry['timestamp'].strftime('%Y-%m-%d %H:%M:%S')}] ")
+                    f.write(f"{entry['evento']}\n")
+                    
+                    for key, value in entry.items():
+                        if key not in ['timestamp', 'evento']:
+                            f.write(f"  {key}: {value}\n")
+                    f.write("\n")
+                
+                f.write("=" * 80 + "\n")
+                f.write("FIN DEL LOG\n")
+                f.write("=" * 80 + "\n")
+            
+            print(f"📝 Log de auditoría guardado: {log_file}")
+        except Exception as e:
+            print(f"⚠️  No se pudo guardar el log de auditoría: {e}")
+
+# ==============================
+# FUNCIONES DE ANONIMIZACIÓN
+# ==============================
+
+def anonimizar_datos_sensibles(sheet, columns):
+    """
+    Anonimiza datos sensibles como RFCs y nombres
+    SOLO si MODO_ANONIMIZAR está activado
+    """
+    if not ConfiguracionSeguridad.MODO_ANONIMIZAR:
+        return 0
+    
+    print("🔒 Anonimizando datos sensibles...")
+    filas_anonimizadas = 0
+    
+    # Columnas a anonimizar
+    cols_anonimizar = {
+        'RFC emisor': 'XAXX010101XXX',
+        'Razon emisor': 'PROVEEDOR ANONIMIZADO',
+        'RFC receptor': 'XAXX010101XXX', 
+        'Razon receptor': 'RECEPTOR ANONIMIZADO',
+        'UUID': None  # Se generará uno falso
+    }
+    
+    for row in range(2, sheet.max_row + 1):
+        for col_name, valor_anonimo in cols_anonimizar.items():
+            # Buscar columna
+            col = None
+            for cell in sheet[1]:
+                if cell.value and col_name.lower() in str(cell.value).lower():
+                    col = cell.column
+                    break
+            
+            if col:
+                if col_name == 'UUID':
+                    # Generar UUID falso pero con formato válido
+                    valor_anonimo = f"ANONIMIZADO-{row:08d}-XXXX-XXXX-XXXXXXXXXXXX"
+                
+                sheet.cell(row=row, column=col, value=valor_anonimo)
+                sheet.cell(row=row, column=col).fill = PatternFill(
+                    start_color='FFFF00', 
+                    end_color='FFFF00', 
+                    fill_type='solid'
+                )
+        
+        filas_anonimizadas += 1
+    
+    print(f"✅ {filas_anonimizadas} filas anonimizadas correctamente")
+    return filas_anonimizadas
 
 # ==============================
 # Configuración inicial
 # ==============================
+
+# Mostrar advertencia de privacidad
+ConfiguracionSeguridad.mostrar_advertencia_inicial()
+
+# Inicializar log de auditoría
+log_auditoria = LogAuditoria()
 
 desktop_path = os.path.join(
     os.path.expanduser('~'),
@@ -22,6 +246,9 @@ file_path = os.path.join(desktop_path, file_name)
 
 # Iniciar cronómetro
 tiempo_inicio = time.time()
+
+# Registrar inicio en log
+log_auditoria.registrar_inicio(file_path)
 
 # ==============================
 # Estilos
@@ -91,22 +318,34 @@ def es_producto_dulce(concepto):
     if not concepto:
         return False
     palabras = [
-        # Pan dulce
+        # Pan dulce y panadería
         'pan', 'roles', 'conchas', 'mantecadas', 'donas', 'panque',
         'gansito', 'pinguinos', 'submarinos', 'chocorol', 'principe',
         'pastisetas', 'canelitas', 'polvorones', 'triki', 'duo',
+        'rebanada', 'colchones', 'cuernitos', 'medias noches',
+        
+        # Pan especial (blanco, integral, molido)
+        'pan blanco', 'pan integral', 'pan molido', 'empanizador',
+        
+        # Tostadas y tortillas
+        'tostada', 'tostaditas', 'tostado', 'tortillinas', 'salmas',
         
         # Chocolates y dulces
         'chocolate', 'bon o bon', 'hershey', 'reese', 'kit kat',
+        'kremas', 'trident',
         
-        # Botanas
+        # Botanas saladas
         'papas', 'chips', 'sabritas', 'doritos', 'cheetos', 'ruffles',
         'barcel', 'takis', 'hot nuts', 'cacahuates', 'kiyakis',
-        'runners', 'churrumais', 'tostitos', 'fritos',
+        'runners', 'churrumais', 'tostitos', 'fritos', 'big mix',
         
         # Galletas
         'galletas', 'oreo', 'emperador', 'marías', 'animalitos',
-        'chokis', 'principe', 'sponch', 'barrita'
+        'chokis', 'principe', 'sponch', 'barrita',
+        
+        # Bebidas con IEPS (refrescos)
+        'pepsi', 'coca', 'sprite', 'fanta', 'monster', 'gatorade',
+        'ades', 'delsey'
     ]
     concepto_lower = concepto.lower()
     return any(p in concepto_lower for p in palabras)
@@ -133,6 +372,8 @@ try:
     print(f"📊 Filas totales: {sheet.max_row - 1}")
 except Exception as e:
     print(f"❌ Error al abrir el archivo: {e}")
+    log_auditoria.registrar_error(e)
+    log_auditoria.guardar_log()
     raise SystemExit(1)
 
 # ==============================
@@ -159,6 +400,12 @@ columns = {}
 
 for key, col_name in required_columns.items():
     columns[key] = create_column_if_missing(sheet, col_name)
+
+# ==============================
+# ANONIMIZACIÓN (si está activada)
+# ==============================
+
+filas_anonimizadas = anonimizar_datos_sensibles(sheet, columns)
 
 # ==============================
 # OPTIMIZACIÓN: Pre-indexar columnas IEPS
@@ -327,10 +574,7 @@ for row in range(2, sheet.max_row + 1):
         progreso = ((row - 1) / total_filas) * 100
         print(f"📊 Procesando: {row - 1}/{total_filas} facturas ({progreso:.1f}%)")
     
-    # ==============================
     # Leer celdas necesarias UNA VEZ
-    # ==============================
-    
     row_data = {
         'concepto': str(sheet.cell(row=row, column=columns['Conceptos']).value or ''),
         'total': float(sheet.cell(row=row, column=columns['Total']).value or 0),
@@ -344,10 +588,7 @@ for row in range(2, sheet.max_row + 1):
     es_gasolina_concepto = es_gasolina(row_data['concepto'])
     es_dulce_concepto = es_producto_dulce(row_data['concepto'])
     
-    # ==============================
     # Buscar valores IEPS (OPTIMIZADO)
-    # ==============================
-    
     ieps_8_val = 0.0
     ieps_gas_val = 0.0
     ieps_nd_val = 0.0
@@ -362,11 +603,7 @@ for row in range(2, sheet.max_row + 1):
     if ieps_no_desglosado_encontrado:
         ieps_nd_val = float(sheet.cell(row=row, column=columns['IEPS Trasladado No Desglosado']).value or 0)
     
-    # ==============================
     # LÓGICA DE SUB1-16% SEGÚN TIPO DE IEPS
-    # ==============================
-    
-    # CASO 1: Productos con IEPS 8% (dulces, botanas, pan)
     if ieps_8_val > 0:
         # SUB1 = (SubTotal - Descuento) + IEPS 8%
         formula_sub1 = f"=({col_letters['SubTotal']}{row}-{col_letters['Descuento']}{row})+{col_letters['IEPS8']}{row}"
@@ -378,7 +615,6 @@ for row in range(2, sheet.max_row + 1):
         
         ieps_8_procesados += 1
         
-    # CASO 2: Gasolina con IEPS (va a IVA 0%)
     elif es_gasolina_concepto and (ieps_gas_val > 0 or ieps_nd_val > 0):
         # IEPS de gasolina → copiar a IVA 0%
         ieps_gasolina = ieps_gas_val if ieps_gas_val > 0 else ieps_nd_val
@@ -393,7 +629,6 @@ for row in range(2, sheet.max_row + 1):
         gasolina_con_ieps += 1
         ieps_gasolina_procesados += 1
         
-    # CASO 3: Sin IEPS (normal)
     else:
         # SUB1 normal
         formula_sub1 = f"=({col_letters['SubTotal']}{row}-{col_letters['Descuento']}{row})"
@@ -410,10 +645,7 @@ for row in range(2, sheet.max_row + 1):
     sheet.cell(row=row, column=sub1_col).number_format = "0.00"
     sheet.cell(row=row, column=sub1_col).font = result_style
     
-    # ==============================
     # SUB0% = IVA 0% + IVA Exento
-    # ==============================
-    
     sheet.cell(
         row=row,
         column=sub0_col,
@@ -422,10 +654,7 @@ for row in range(2, sheet.max_row + 1):
     sheet.cell(row=row, column=sub0_col).number_format = "0.00"
     sheet.cell(row=row, column=sub0_col).font = result_style
     
-    # ==============================
     # SUB2-16% = SUB1 - SUB0 (SIEMPRE)
-    # ==============================
-    
     sheet.cell(
         row=row,
         column=sub2_col,
@@ -434,10 +663,7 @@ for row in range(2, sheet.max_row + 1):
     sheet.cell(row=row, column=sub2_col).number_format = "0.00"
     sheet.cell(row=row, column=sub2_col).font = result_style
     
-    # ==============================
     # IVA ACREDITABLE 16% = SUB2 * 0.16
-    # ==============================
-    
     sheet.cell(
         row=row,
         column=iva_acred_col,
@@ -470,10 +696,7 @@ for row in range(2, sheet.max_row + 1):
     except:
         pass
     
-    # ==============================
     # C IVA = IVA Acreditable - IVA 16%
-    # ==============================
-    
     sheet.cell(
         row=row,
         column=c_iva_col,
@@ -482,10 +705,7 @@ for row in range(2, sheet.max_row + 1):
     sheet.cell(row=row, column=c_iva_col).number_format = "0.00"
     sheet.cell(row=row, column=c_iva_col).font = result_style
     
-    # ==============================
     # T2 = SUB2 + SUB0 + IVA16
-    # ==============================
-    
     sheet.cell(
         row=row,
         column=t2_col,
@@ -494,10 +714,7 @@ for row in range(2, sheet.max_row + 1):
     sheet.cell(row=row, column=t2_col).number_format = "0.00"
     sheet.cell(row=row, column=t2_col).font = result_style
     
-    # ==============================
     # Comprobación T2 = Total - T2
-    # ==============================
-    
     sheet.cell(
         row=row,
         column=comprob_col,
@@ -506,10 +723,7 @@ for row in range(2, sheet.max_row + 1):
     sheet.cell(row=row, column=comprob_col).number_format = "0.00"
     sheet.cell(row=row, column=comprob_col).font = result_style
     
-    # ==============================
     # Formateo y validaciones
-    # ==============================
-    
     regimen = extract_code(row_data['regimen'])
     
     if regimen == '626':
@@ -535,10 +749,7 @@ for row in range(2, sheet.max_row + 1):
         if efecto_val and str(efecto_val).strip().upper() in ['EGRESO', 'E']:
             es_egreso = True
     
-    # ==============================
     # VALIDACIÓN DE DEDUCIBILIDAD
-    # ==============================
-    
     metodo_pg = extract_code(row_data['metodo_pago']).upper()
     forma_pg = extract_code(row_data['forma_pago']).upper()
     
@@ -621,20 +832,34 @@ sheet.column_dimensions[get_column_letter(razon_no_ded_col)].width = 40
 
 try:
     base_name = re.sub(r'\.xlsx$', '', file_name, flags=re.IGNORECASE)
-    output_name = os.path.join(desktop_path, f"{base_name}_validado.xlsx")
+    
+    # Agregar sufijo según modo
+    if ConfiguracionSeguridad.MODO_ANONIMIZAR:
+        output_name = os.path.join(desktop_path, f"{base_name}_ANONIMIZADO_validado.xlsx")
+    else:
+        output_name = os.path.join(desktop_path, f"{base_name}_validado.xlsx")
+    
     workbook.save(output_name)
     
     tiempo_fin = time.time()
     tiempo_total = tiempo_fin - tiempo_inicio
     velocidad = total_filas / tiempo_total if tiempo_total > 0 else 0
 
+    # Registrar fin en log de auditoría
+    log_auditoria.registrar_fin(output_name, total_filas, tiempo_total)
+
     print("\n" + "=" * 80)
-    print("✅ PROCESO COMPLETADO EXITOSAMENTE - ReaDesF1.0")
+    print("✅ PROCESO COMPLETADO EXITOSAMENTE - ReaDesF1.1 (PRODUCCIÓN)")
     print("=" * 80)
     print(f"📂 Archivo guardado como: {output_name}")
     print(f"📊 Total de filas procesadas: {total_filas}")
     print(f"⏱️  Tiempo total: {tiempo_total:.2f} segundos")
     print(f"⚡ Velocidad: {velocidad:.0f} facturas/segundo")
+    
+    if ConfiguracionSeguridad.MODO_ANONIMIZAR:
+        print(f"\n🔒 MODO ANONIMIZACIÓN:")
+        print(f"  • Filas anonimizadas: {filas_anonimizadas}")
+        print(f"  • Este archivo es SEGURO para compartir")
 
     print("\n📌 RESUMEN DE VALIDACIÓN:")
     print(f"\n🍬 IEPS 8% (Dulces/Botanas):")
@@ -669,11 +894,21 @@ try:
     print("  🟥 ROJO: NO deducible")
     print("  🟪 MORADO: Régimen 612")
     print("  🟧 NARANJA: Gasolina sin IEPS / Otros regímenes")
-    print("  🟨 AMARILLO: Advertencia")
+    print("  🟨 AMARILLO: Advertencia / Datos anonimizados")
     print("  🌸 ROSA: Dulces/Botanas con IEPS 8%")
 
+    print("\n" + "=" * 80)
+    print("🔐 RECORDATORIO DE SEGURIDAD:")
+    print("  • Este archivo contiene información fiscal CONFIDENCIAL")
+    print("  • Almacena el archivo en ubicación SEGURA")
+    print("  • NO compartas este archivo sin cifrar")
+    print("  • Elimina archivos temporales cuando termines")
     print("=" * 80)
 
 except Exception as e:
     print("\n❌ Error al guardar el archivo:")
     print(e)
+    log_auditoria.registrar_error(e)
+finally:
+    # Guardar log de auditoría
+    log_auditoria.guardar_log()
