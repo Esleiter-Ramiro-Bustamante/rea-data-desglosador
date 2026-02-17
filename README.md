@@ -266,7 +266,7 @@ El usuario es responsable de:
 
 ## 👤 Autor
 
-Desarrollado para la comunidad fiscal de México.
+Esleiter Ramiro Bustamante Ataxca
 
 ---
 
@@ -278,7 +278,7 @@ Desarrollado para la comunidad fiscal de México.
 
 ## 🙏 Agradecimientos
 
-- Esleiter Ramiro Bustamante Ataxca
+
 - CP.Angelica Chagala Sixtega
 - Comunidad fiscal mexicana
 - Anthropic Claude por asistencia en desarrollo
