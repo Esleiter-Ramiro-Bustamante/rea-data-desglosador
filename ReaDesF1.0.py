@@ -1,4 +1,4 @@
-"""
+﻿"""
 ===============================================================================
 ReaDesF1.1 - VALIDADOR FISCAL CON SEGURIDAD Y PRIVACIDAD
 ===============================================================================
@@ -235,7 +235,7 @@ log_auditoria = LogAuditoria()
 
 desktop_path = os.path.join(
     os.path.expanduser('~'),
-    'Desktop/GASTOS RESICO/2026/ENERO26'
+    'Desktop/GASTOS RESICO/2026/FEBRERO26'
 )
 
 file_name = input("Ingrese el nombre del archivo Excel (sin extensión .xlsx): ")
@@ -365,15 +365,149 @@ REGIMENES_FACILIDAD_COMBUSTIBLE = ['626']
 # Abrir archivo Excel
 # ==============================
 
+def mostrar_error_archivo(file_path, error):
+    """Muestra un mensaje de error claro y amigable"""
+    print("\n" + "╔" + "═" * 78 + "╗")
+    print("║" + " " * 25 + "⚠️  ERROR AL CARGAR ARCHIVO" + " " * 26 + "║")
+    print("╠" + "═" * 78 + "╣")
+    print("║" + " " * 78 + "║")
+    print("║  ❌ No se pudo encontrar o abrir el archivo" + " " * 32 + "║")
+    print("║" + " " * 78 + "║")
+    print("║  📂 Ruta buscada:" + " " * 60 + "║")
+    
+    # Dividir ruta si es muy larga
+    if len(file_path) > 72:
+        # Mostrar carpeta
+        carpeta = os.path.dirname(file_path)
+        archivo = os.path.basename(file_path)
+        print(f"║     {carpeta[:72]:<72}║")
+        if len(carpeta) > 72:
+            print(f"║     {carpeta[72:144]:<72}║")
+        print(f"║     {archivo:<72}║")
+    else:
+        print(f"║     {file_path:<72}║")
+    
+    print("║" + " " * 78 + "║")
+    print("║  🔍 Posibles causas:" + " " * 57 + "║")
+    print("║     • El nombre del archivo está mal escrito" + " " * 32 + "║")
+    print("║     • El archivo no existe en la carpeta especificada" + " " * 23 + "║")
+    print("║     • La carpeta no existe" + " " * 50 + "║")
+    print("║     • El archivo está abierto en Excel u otro programa" + " " * 23 + "║")
+    print("║" + " " * 78 + "║")
+    print("║  💡 Soluciones:" + " " * 61 + "║")
+    print("║     1. Verifica que el archivo exista en la carpeta correcta" + " " * 17 + "║")
+    print("║     2. Verifica que escribiste el nombre correctamente" + " " * 24 + "║")
+    print("║     3. Cierra el archivo si está abierto en Excel" + " " * 28 + "║")
+    print("║     4. Verifica que la ruta de la carpeta sea correcta:" + " " * 21 + "║")
+    
+    # Mostrar carpeta esperada
+    carpeta_esperada = os.path.dirname(file_path)
+    if len(carpeta_esperada) > 72:
+        print(f"║        {carpeta_esperada[:69]:<69}...║")
+    else:
+        print(f"║        {carpeta_esperada:<72}║")
+    
+    print("║" + " " * 78 + "║")
+    
+    # Listar archivos en la carpeta si existe
+    carpeta = os.path.dirname(file_path)
+    if os.path.exists(carpeta):
+        print("║  📁 Archivos Excel disponibles en esta carpeta:" + " " * 28 + "║")
+        try:
+            archivos_excel = [f for f in os.listdir(carpeta) 
+                            if f.endswith(('.xlsx', '.xls', '.xlsm'))]
+            if archivos_excel:
+                for i, archivo in enumerate(archivos_excel[:5], 1):  # Mostrar máximo 5
+                    nombre_corto = archivo[:68] if len(archivo) > 68 else archivo
+                    print(f"║     {i}. {nombre_corto:<70}║")
+                if len(archivos_excel) > 5:
+                    print(f"║        ... y {len(archivos_excel) - 5} archivos más" + " " * 45 + "║")
+            else:
+                print("║     (No se encontraron archivos Excel en esta carpeta)" + " " * 21 + "║")
+        except Exception as e:
+            print("║     (No se pudo listar archivos)" + " " * 44 + "║")
+    else:
+        print("║  ⚠️  La carpeta no existe:" + " " * 51 + "║")
+        print(f"║     {carpeta:<72}║")
+    
+    print("║" + " " * 78 + "║")
+    print("╚" + "═" * 78 + "╝")
+    print()
+
 try:
+    # Verificar si existe la carpeta primero
+    if not os.path.exists(desktop_path):
+        print("\n" + "╔" + "═" * 78 + "╗")
+        print("║" + " " * 20 + "⚠️  CARPETA NO ENCONTRADA" + " " * 32 + "║")
+        print("╠" + "═" * 78 + "╣")
+        print("║" + " " * 78 + "║")
+        print("║  La carpeta especificada no existe:" + " " * 41 + "║")
+        print(f"║  {desktop_path[:76]:<76}║")
+        print("║" + " " * 78 + "║")
+        print("║  💡 Crea la carpeta o verifica la ruta en el código (línea ~310)" + " " * 10 + "║")
+        print("║" + " " * 78 + "║")
+        print("╚" + "═" * 78 + "╝")
+        log_auditoria.registrar_error(f"Carpeta no encontrada: {desktop_path}")
+        log_auditoria.guardar_log()
+        input("\n👉 Presiona ENTER para salir...")
+        raise SystemExit(1)
+    
+    # Verificar si existe el archivo
+    if not os.path.exists(file_path):
+        mostrar_error_archivo(file_path, "Archivo no encontrado")
+        log_auditoria.registrar_error(f"Archivo no encontrado: {file_path}")
+        log_auditoria.guardar_log()
+        input("\n👉 Presiona ENTER para salir...")
+        raise SystemExit(1)
+    
+    # Intentar abrir el archivo
     workbook = openpyxl.load_workbook(file_path)
     sheet = workbook.active
     print(f"✅ Archivo cargado: {file_path}")
     print(f"📊 Filas totales: {sheet.max_row - 1}")
-except Exception as e:
-    print(f"❌ Error al abrir el archivo: {e}")
+    
+except FileNotFoundError as e:
+    mostrar_error_archivo(file_path, e)
     log_auditoria.registrar_error(e)
     log_auditoria.guardar_log()
+    input("\n👉 Presiona ENTER para salir...")
+    raise SystemExit(1)
+except PermissionError as e:
+    print("\n" + "╔" + "═" * 78 + "╗")
+    print("║" + " " * 25 + "⚠️  ARCHIVO BLOQUEADO" + " " * 31 + "║")
+    print("╠" + "═" * 78 + "╣")
+    print("║" + " " * 78 + "║")
+    print("║  ❌ El archivo está abierto en otro programa" + " " * 32 + "║")
+    print("║" + " " * 78 + "║")
+    print(f"║  📂 {os.path.basename(file_path):<74}║")
+    print("║" + " " * 78 + "║")
+    print("║  💡 Solución:" + " " * 63 + "║")
+    print("║     • Cierra el archivo en Excel u otro programa" + " " * 28 + "║")
+    print("║     • Vuelve a ejecutar el script" + " " * 44 + "║")
+    print("║" + " " * 78 + "║")
+    print("╚" + "═" * 78 + "╝")
+    log_auditoria.registrar_error(e)
+    log_auditoria.guardar_log()
+    input("\n👉 Presiona ENTER para salir...")
+    raise SystemExit(1)
+except Exception as e:
+    print("\n" + "╔" + "═" * 78 + "╗")
+    print("║" + " " * 25 + "⚠️  ERROR INESPERADO" + " " * 32 + "║")
+    print("╠" + "═" * 78 + "╣")
+    print("║" + " " * 78 + "║")
+    print("║  ❌ Ocurrió un error al procesar el archivo" + " " * 33 + "║")
+    print("║" + " " * 78 + "║")
+    error_msg = str(e)[:72]
+    print(f"║  {error_msg:<76}║")
+    print("║" + " " * 78 + "║")
+    print("║  💡 Verifica:" + " " * 63 + "║")
+    print("║     • Que el archivo sea un Excel válido (.xlsx, .xls)" + " " * 23 + "║")
+    print("║     • Que el archivo no esté corrupto" + " " * 38 + "║")
+    print("║" + " " * 78 + "║")
+    print("╚" + "═" * 78 + "╝")
+    log_auditoria.registrar_error(e)
+    log_auditoria.guardar_log()
+    input("\n👉 Presiona ENTER para salir...")
     raise SystemExit(1)
 
 # ==============================
