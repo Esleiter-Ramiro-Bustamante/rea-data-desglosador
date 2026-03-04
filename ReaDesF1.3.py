@@ -1,6 +1,6 @@
 ﻿"""
 ===============================================================================
-ReaDesF1.1 - VALIDADOR FISCAL CON SEGURIDAD Y PRIVACIDAD
+ReaDesF1.3 - VALIDADOR FISCAL CON GASOLINA AGRUPADA (RESICO)
 ===============================================================================
 
 POLÍTICA DE PRIVACIDAD Y SEGURIDAD:
@@ -17,9 +17,20 @@ CARACTERÍSTICAS DE SEGURIDAD:
 ✓ Verificación de integridad de datos
 ✓ Advertencias de seguridad
 
+NUEVO EN v1.3:
+✓ Facilidad RESICO: Gasolina agrupada (múltiples despachos) en efectivo
+✓ Detección automática de despachos separados por '|'
+✓ Validación diferenciada: 626 vs 612
+
+NUEVO EN v1.2:
+✓ Reglas fiscales diferenciadas por régimen (626 vs 612)
+✓ Colores específicos por régimen
+✓ Mensajes personalizados según régimen
+✓ Validación estricta para régimen 612
+
 Desarrollado para: Validación fiscal de facturas CFDI (México)
-Versión: 1.1
-Fecha: Febrero 2026
+Versión: 1.3
+Fecha: Marzo 2026
 
 ===============================================================================
 """
@@ -261,6 +272,7 @@ purple_fill = PatternFill(start_color='800080', end_color='800080', fill_type='s
 orange_fill = PatternFill(start_color='FFA500', end_color='FFA500', fill_type='solid')
 yellow_fill = PatternFill(start_color='FFFF00', end_color='FFFF00', fill_type='solid')
 pink_fill = PatternFill(start_color='FF69B4', end_color='FF69B4', fill_type='solid')
+brown_fill = PatternFill(start_color='8B4513', end_color='8B4513', fill_type='solid')  # Café para 616
 
 result_style = Font(bold=True)
 center_align = Alignment(horizontal='center')
@@ -350,6 +362,29 @@ def es_producto_dulce(concepto):
     concepto_lower = concepto.lower()
     return any(p in concepto_lower for p in palabras)
 
+def es_gasolina_agrupada(concepto):
+    """
+    Detecta si es gasolina con múltiples despachos agrupados.
+    Los despachos múltiples están separados por el carácter '|'
+    
+    Ejemplo:
+    "32012 GASOLINA PEMEX PREMIUM (Despacho 7563153-0) | 
+     32012 GASOLINA PEMEX PREMIUM (Despacho 7560270-0) | 
+     32012 GASOLINA PEMEX PREMIUM (Despacho 7555187-0)"
+    
+    IMPORTANTE: Esta facilidad SOLO aplica para régimen 626 (RESICO)
+    Art. 27 LISR + Facilidades administrativas RESICO
+    """
+    if not concepto or not es_gasolina(concepto):
+        return False
+    
+    # Contar separadores | (pipe)
+    # Si hay al menos 1 separador, son mínimo 2 despachos
+    num_separadores = concepto.count('|')
+    
+    # Múltiples despachos = agrupada
+    return num_separadores >= 1
+
 # ==============================
 # Reglas de deducibilidad
 # ==============================
@@ -359,7 +394,11 @@ METODOS_VALIDOS = ['PUE', 'PPD']
 FORMAS_VALIDAS = ['01', '02', '03', '04', '28']
 FORMAS_ELECTRONICAS = ['02', '03', '04', '28']
 USO_CFDI_VERDE = "G02 - Devoluciones, descuentos o bonificaciones"
-REGIMENES_FACILIDAD_COMBUSTIBLE = ['626']
+
+# Regímenes con facilidades especiales
+REGIMENES_FACILIDAD_COMBUSTIBLE = ['626']  # RESICO tiene facilidad de gasolina ≤$2,000
+REGIMENES_TRABAJADOS = ['626', '612']  # Regímenes que manejamos
+REGIMENES_ADVERTENCIA = ['605', '616']  # Regímenes que requieren advertencia
 
 # ==============================
 # Abrir archivo Excel
@@ -681,7 +720,9 @@ ieps_no_desglosado_procesados = 0
 # Contadores gasolina
 gasolina_con_ieps = 0
 gasolina_sin_ieps = 0
-gasolina_efectivo = 0
+gasolina_efectivo_626 = 0
+gasolina_efectivo_626_agrupada = 0  # NUEVO: Gasolina agrupada RESICO
+gasolina_efectivo_612 = 0
 gasolina_electronico = 0
 
 # Contadores dulces
@@ -691,6 +732,9 @@ dulces_sin_ieps8 = 0
 # Contadores generales
 uso_s01_count = 0
 efectivo_mayor_2000 = 0
+
+# Contadores por régimen
+regimenes_encontrados = {}
 
 print("🔧 Iniciando procesamiento optimizado de filas...")
 print("=" * 80)
@@ -717,6 +761,14 @@ for row in range(2, sheet.max_row + 1):
         'forma_pago': sheet.cell(row=row, column=columns['Forma pago']).value,
         'regimen': sheet.cell(row=row, column=columns['Regimen receptor']).value,
     }
+    
+    # Extraer código de régimen
+    regimen = extract_code(row_data['regimen'])
+    
+    # Contar regímenes encontrados
+    if regimen not in regimenes_encontrados:
+        regimenes_encontrados[regimen] = 0
+    regimenes_encontrados[regimen] += 1
     
     # Detectar tipo de producto (una sola vez)
     es_gasolina_concepto = es_gasolina(row_data['concepto'])
@@ -857,13 +909,18 @@ for row in range(2, sheet.max_row + 1):
     sheet.cell(row=row, column=comprob_col).number_format = "0.00"
     sheet.cell(row=row, column=comprob_col).font = result_style
     
-    # Formateo y validaciones
-    regimen = extract_code(row_data['regimen'])
+    # ==============================
+    # FORMATEO POR RÉGIMEN
+    # ==============================
     
     if regimen == '626':
         sheet.cell(row=row, column=columns['Regimen receptor']).fill = blue_fill
     elif regimen == '612':
         sheet.cell(row=row, column=columns['Regimen receptor']).fill = purple_fill
+    elif regimen == '616':
+        sheet.cell(row=row, column=columns['Regimen receptor']).fill = brown_fill
+    elif regimen in REGIMENES_ADVERTENCIA:
+        sheet.cell(row=row, column=columns['Regimen receptor']).fill = orange_fill
     else:
         sheet.cell(row=row, column=columns['Regimen receptor']).fill = orange_fill
         sheet.cell(row=row, column=columns['Razon emisor']).fill = orange_fill
@@ -883,13 +940,17 @@ for row in range(2, sheet.max_row + 1):
         if efecto_val and str(efecto_val).strip().upper() in ['EGRESO', 'E']:
             es_egreso = True
     
-    # VALIDACIÓN DE DEDUCIBILIDAD
+    # ==============================
+    # VALIDACIÓN DE DEDUCIBILIDAD POR RÉGIMEN
+    # ==============================
+    
     metodo_pg = extract_code(row_data['metodo_pago']).upper()
     forma_pg = extract_code(row_data['forma_pago']).upper()
     
     es_deducible = True
     razones_rechazo = []
     
+    # Validaciones comunes para TODOS los regímenes
     if uso_cfdi not in USOS_DEDUCIBLES:
         es_deducible = False
         razones_rechazo.append(f"Uso CFDI {uso_cfdi} no deducible")
@@ -898,33 +959,84 @@ for row in range(2, sheet.max_row + 1):
         es_deducible = False
         razones_rechazo.append(f"Método {metodo_pg} inválido")
     
-    # VALIDACIÓN GASOLINA
+    # ==============================
+    # VALIDACIÓN ESPECÍFICA POR RÉGIMEN
+    # ==============================
+    
+    # VALIDACIÓN PARA GASOLINA
     if es_gasolina_concepto:
-        if forma_pg == '01':
-            if regimen in REGIMENES_FACILIDAD_COMBUSTIBLE and row_data['total'] <= 2000:
-                gasolina_efectivo += 1
-                sheet.cell(row=row, column=columns['Forma pago']).fill = yellow_fill
-                razones_rechazo.append("RESICO: Gasolina efectivo ≤$2,000 (facilidad)")
+        if forma_pg == '01':  # Efectivo
+            
+            # ============================================================
+            # RÉGIMEN 626 (RESICO) - FACILIDAD GASOLINA AGRUPADA
+            # ============================================================
+            if regimen == '626':
+                # Detectar si es gasolina agrupada (múltiples despachos)
+                if es_gasolina_agrupada(row_data['concepto']):
+                    # CASO ESPECIAL: Gasolina agrupada en efectivo >$2,000
+                    # Facilidad RESICO: múltiples despachos SÍ son deducibles
+                    num_despachos = row_data['concepto'].count('|') + 1
+                    gasolina_efectivo_626 += 1
+                    gasolina_efectivo_626_agrupada += 1
+                    sheet.cell(row=row, column=columns['Forma pago']).fill = yellow_fill
+                    razones_rechazo.append(f"RESICO (626): {num_despachos} despachos agrupados en efectivo (facilidad)")
+                    # es_deducible permanece True
+                
+                elif row_data['total'] <= 2000:
+                    # Gasolina individual ≤$2,000: Deducible
+                    gasolina_efectivo_626 += 1
+                    sheet.cell(row=row, column=columns['Forma pago']).fill = yellow_fill
+                    razones_rechazo.append("RESICO (626): Gasolina efectivo ≤$2,000 (facilidad)")
+                    # es_deducible permanece True
+                
+                else:
+                    # Gasolina individual >$2,000: NO deducible
+                    es_deducible = False
+                    gasolina_efectivo_626 += 1
+                    razones_rechazo.append("RESICO (626): Gasolina individual efectivo >$2,000 NO deducible")
+                    sheet.cell(row=row, column=columns['Forma pago']).fill = red_fill
+            
+            # ============================================================
+            # RÉGIMEN 612 - SIN FACILIDAD (Art. 27, Fracc. III LISR)
+            # ============================================================
+            elif regimen == '612':
+                # Gasolina NUNCA en efectivo (agrupada o individual)
+                es_deducible = False
+                gasolina_efectivo_612 += 1
+                razones_rechazo.append("Régimen 612: Gasolina NO deducible en efectivo (Art. 27)")
+                sheet.cell(row=row, column=columns['Forma pago']).fill = red_fill
+            
+            # ============================================================
+            # OTROS REGÍMENES
+            # ============================================================
             else:
                 es_deducible = False
-                gasolina_efectivo += 1
                 razones_rechazo.append("Gasolina NO deducible en efectivo")
                 sheet.cell(row=row, column=columns['Forma pago']).fill = red_fill
-        else:
+        
+        else:  # Gasolina electrónica
             gasolina_electronico += 1
             if forma_pg not in FORMAS_ELECTRONICAS:
                 es_deducible = False
                 razones_rechazo.append(f"Gasolina: forma de pago {forma_pg} inválida")
+    
+    # VALIDACIÓN PARA GASTOS NORMALES (NO gasolina)
     else:
+        # Efectivo >$2,000: NO deducible para TODOS los regímenes (Art. 27, Fracc. III LISR)
         if forma_pg == '01' and row_data['total'] > 2000:
             es_deducible = False
             efectivo_mayor_2000 += 1
-            razones_rechazo.append("Efectivo >$2,000 NO deducible")
+            razones_rechazo.append("Efectivo >$2,000 NO deducible (Art. 27)")
             if efecto_col:
                 sheet.cell(row=row, column=efecto_col).fill = red_fill
+        
         elif forma_pg not in FORMAS_VALIDAS:
             es_deducible = False
             razones_rechazo.append(f"Forma de pago {forma_pg} inválida")
+    
+    # Advertencias para regímenes no trabajados
+    if regimen not in REGIMENES_TRABAJADOS:
+        razones_rechazo.append(f"⚠️ Régimen {regimen}: Verificar manualmente")
     
     # Escribir resultado
     ded_cell = sheet.cell(row=row, column=deducible_col, value="SI" if es_deducible else "NO")
@@ -958,7 +1070,7 @@ for row in range(2, sheet.max_row + 1):
 for col in range(last_column + 1, last_column + len(headers) + 1):
     sheet.column_dimensions[get_column_letter(col)].width = 15
 
-sheet.column_dimensions[get_column_letter(razon_no_ded_col)].width = 40
+sheet.column_dimensions[get_column_letter(razon_no_ded_col)].width = 50
 
 # ==============================
 # Guardar archivo
@@ -983,7 +1095,7 @@ try:
     log_auditoria.registrar_fin(output_name, total_filas, tiempo_total)
 
     print("\n" + "=" * 80)
-    print("✅ PROCESO COMPLETADO EXITOSAMENTE - ReaDesF1.1 (PRODUCCIÓN)")
+    print("✅ PROCESO COMPLETADO EXITOSAMENTE - ReaDesF1.3 (GASOLINA AGRUPADA)")
     print("=" * 80)
     print(f"📂 Archivo guardado como: {output_name}")
     print(f"📊 Total de filas procesadas: {total_filas}")
@@ -995,6 +1107,10 @@ try:
         print(f"  • Filas anonimizadas: {filas_anonimizadas}")
         print(f"  • Este archivo es SEGURO para compartir")
 
+    print("\n📋 REGÍMENES ENCONTRADOS:")
+    for reg, count in sorted(regimenes_encontrados.items()):
+        print(f"  • Régimen {reg}: {count} facturas")
+
     print("\n📌 RESUMEN DE VALIDACIÓN:")
     print(f"\n🍬 IEPS 8% (Dulces/Botanas):")
     print(f"  • Facturas con IEPS 8% procesadas: {ieps_8_procesados}")
@@ -1005,7 +1121,9 @@ try:
     print(f"  • Facturas con IEPS gasolina: {ieps_gasolina_procesados}")
     print(f"  • Gasolina con IEPS: {gasolina_con_ieps}")
     print(f"  • Gasolina sin IEPS: {gasolina_sin_ieps}")
-    print(f"  • Gasolina pagada en efectivo: {gasolina_efectivo}")
+    print(f"  • Gasolina efectivo 626 (RESICO): {gasolina_efectivo_626}")
+    print(f"    └─ Agrupada (múltiples despachos): {gasolina_efectivo_626_agrupada}")
+    print(f"  • Gasolina efectivo 612 (rechazadas): {gasolina_efectivo_612}")
     print(f"  • Gasolina pagada electrónicamente: {gasolina_electronico}")
     
     print(f"\n📋 General:")
@@ -1013,22 +1131,30 @@ try:
     print(f"  • Usos S01 (sin efectos fiscales): {uso_s01_count}")
     print(f"  • Gastos normales efectivo >$2,000: {efectivo_mayor_2000}")
 
-    print("\n⚠️  REGLAS APLICADAS:")
-    print("  1. Art. 27, fracc. III LISR: Efectivo >$2,000 NO deducible")
-    print("  2. Art. 27, fracc. III LISR: Gasolina NUNCA en efectivo")
-    print("     (Excepción: RESICO hasta $2,000)")
-    print("  3. IEPS 8% se suma a SUB1: SUB1 = (SubTotal - Descuento) + IEPS 8%")
-    print("  4. IEPS Gasolina va a IVA 0%")
-    print("  5. Uso CFDI válido: G01, G02, G03")
-    print("  6. Método de pago válido: PUE, PPD")
+    print("\n⚠️  REGLAS APLICADAS POR RÉGIMEN:")
+    print("  COMÚN A TODOS:")
+    print("    • Art. 27, Fracc. III LISR: Efectivo >$2,000 NO deducible")
+    print("    • Uso CFDI válido: G01, G02, G03")
+    print("    • Método de pago válido: PUE, PPD")
+    print("\n  RÉGIMEN 626 (RESICO):")
+    print("    • Gasolina efectivo ≤$2,000: Deducible (facilidad)")
+    print("    • Gasolina agrupada (múltiples despachos): Deducible (facilidad)")
+    print("    • Gasolina individual >$2,000: NO deducible")
+    print("\n  RÉGIMEN 612 (Persona Física):")
+    print("    • Gasolina efectivo (cualquier monto): NO deducible")
+    print("    • Sin facilidad de agrupación")
+    print("    • Reglas más estrictas (Art. 27, Fracc. III LISR)")
+    print("\n  OTROS REGÍMENES:")
+    print("    • Se recomienda verificación manual")
 
     print("\n🎨 CÓDIGO DE COLORES:")
-    print("  🟦 AZUL: Gasolina con IEPS / Régimen 626")
+    print("  🟦 AZUL: Régimen 626 (RESICO)")
+    print("  🟪 MORADO: Régimen 612 (Persona Física)")
+    print("  🟫 CAFÉ: Régimen 616 (Sin obligaciones)")
+    print("  🟧 NARANJA: Otros regímenes / Advertencia")
     print("  🟩 VERDE: Deducible / IVA correcto")
     print("  🟥 ROJO: NO deducible")
-    print("  🟪 MORADO: Régimen 612")
-    print("  🟧 NARANJA: Gasolina sin IEPS / Otros regímenes")
-    print("  🟨 AMARILLO: Advertencia / Datos anonimizados")
+    print("  🟨 AMARILLO: Advertencia (RESICO gasolina ≤$2,000)")
     print("  🌸 ROSA: Dulces/Botanas con IEPS 8%")
 
     print("\n" + "=" * 80)
