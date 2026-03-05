@@ -1,289 +1,231 @@
-# 🧾 ReaDesF - Validador Fiscal Automatizado para México
+# ReaDesF1.8 — Sinergia REA
 
-[![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/tuusuario/readesf/graphs/commit-activity)
+> **Validador Fiscal Adaptativo** · Sistema inteligente de clasificación de gastos deducibles para contribuyentes mexicanos
 
-> Sistema profesional de validación y desglose de facturas CFDI para cumplimiento fiscal en México.
+![Version](https://img.shields.io/badge/versión-1.8-FF2D78?style=flat-square)
+![Python](https://img.shields.io/badge/Python-3.8+-FFD600?style=flat-square&logo=python&logoColor=black)
+![Status](https://img.shields.io/badge/estado-activo-00C851?style=flat-square)
+![License](https://img.shields.io/badge/licencia-privada-0057FF?style=flat-square)
 
----
-
-## 📋 Descripción
-
-**ReaDesF** (Reconocedor y Desglosador Fiscal) es una herramienta automatizada que valida facturas electrónicas (CFDI) según las disposiciones fiscales mexicanas, específicamente:
-
-- ✅ Artículo 27 de la Ley del ISR
-- ✅ Validación de IEPS (8% y gasolina)
-- ✅ Deducibilidad fiscal automática
-- ✅ Detección de pagos en efectivo >$2,000
-- ✅ Análisis de formas y métodos de pago
-- ✅ Cumplimiento con LFPDPPP (Protección de Datos)
+`RÉGIMEN 612` · `RÉGIMEN 626 RESICO` · `ART. 103 LISR` · `ART. 27 FRACC. III` · `IEPS 8%` · `INSUMOS AGRÍCOLAS` · `ADAPTIVE PROCESSING` · `FÓRMULAS AUDITABLES`
 
 ---
 
-## ✨ Características Principales
+## ¿Qué es ReaDesF?
 
-### 🔍 Validación Fiscal
-- Deducibilidad automática según Art. 27 LISR
-- Validación de Uso CFDI (G01, G02, G03)
-- Detección de métodos de pago válidos (PUE, PPD)
-- Alertas de efectivo >$2,000
-- Validación especial para gasolina
+ReaDesF es un validador fiscal de gastos deducibles para **Régimen 612** (actividad empresarial) y **Régimen 626 RESICO**. Analiza archivos Excel con facturas CFDI, clasifica cada gasto según la ley, calcula fórmulas auditables y genera un archivo de salida con colores, razones y columnas de validación contable.
 
-### 💰 Manejo de IEPS
-- **IEPS 8%**: Productos dulces, botanas, pan
-- **IEPS Gasolina**: Combustibles (va a IVA 0%)
-- Detección automática por concepto
-- Cálculos ajustados según tipo de IEPS
-
-### 🔐 Seguridad y Privacidad
-- Procesamiento 100% local
-- Modo de anonimización para pruebas
-- Log de auditoría con SHA256
-- Cumplimiento LFPDPPP
-- Sin conexión a internet
-
-### ⚡ Optimización
-- Pre-indexación de columnas IEPS
-- Caché de referencias de columnas
-- Velocidad: ~200-500 facturas/segundo
-- Progreso en tiempo real
+Solo ejecutas `main.py`. El programa mide tu RAM y el tamaño del archivo, elige el motor óptimo automáticamente y procesa todas las facturas. **No necesitas configurar nada manualmente.**
 
 ---
 
-## 🚀 Instalación
+## ¿Qué hay de nuevo en v1.8?
 
-### Requisitos
+| Mejora | Detalle |
+|---|---|
+| 3 motores | `openpyxl` / `pandas` / `pandas_chunks` |
+| Masks vectorizadas | Reemplaza `iterrows()` — 10-50x más rápido |
+| Columnas `category` | Hasta 70% menos RAM en archivos grandes |
+| Fórmulas auditables | sub1 / sub0 / sub2 / iva_acred en los 3 motores |
+| Fallback automático | Si pandas falla por RAM → openpyxl automático |
+
+---
+
+## 01 · Inicio Rápido
+
 ```bash
-Python 3.8 o superior
+# 1. Instalar dependencias
+pip install openpyxl pandas psutil
+
+# 2. Colocar tu archivo Excel en:
+#    Desktop / GASTOS RESICO / 2026 / FEBRERO26
+
+# 3. Ejecutar
+python main.py
+
+# 4. Escribir el nombre del archivo (sin .xlsx)
+#    → GASTOS FEBRERO
+
+# 5. El resultado se guarda como NOMBRE_validado.xlsx
 ```
 
-### Instalar dependencias
+| Paso | Acción |
+|------|--------|
+| 1 | Instalar dependencias en la carpeta `ReaDesF1.8/` |
+| 2 | Colocar el archivo Excel en `Desktop/GASTOS RESICO/2026/FEBRERO26` |
+| 3 | Ejecutar `python main.py` desde la terminal |
+| 4 | El programa analiza tu **RAM** y elige el mejor motor automáticamente |
+| 5 | Escribe el nombre del archivo **sin `.xlsx`** cuando se solicite |
+| 6 | Resultado listo como `NOMBRE_validado.xlsx` con colores, fórmulas y razones |
+
+---
+
+## 02 · Motores Adaptativos
+
+ReaDesF1.8 incluye **3 motores** que se activan según los recursos de tu computadora y el tamaño del archivo.
+
+### ⚙️ openpyxl — SEGURO / MÍNIMO
+- RAM < 4 GB **o** archivo < 5,000 filas
+- Estable en cualquier computadora
+- Fórmulas auditables garantizadas
+- ⚡ ~5,000 facturas / min
+
+### 🐼 pandas — TURBO
+- RAM ≥ 4 GB + 5,000–30,000 filas
+- Detección vectorizada completa
+- Columnas a `category` (70% menos RAM)
+- ⚡ ~20,000 facturas / min
+
+### 🧩 pandas chunks — CHUNKS
+- RAM ≥ 4 GB + > 30,000 filas
+- Bloques de 5,000 filas, RAM constante
+- Hasta 500,000 facturas posible
+- ⚡ ~15,000 facturas / min
+
+### Tabla de decisión automática
+
+| Filas | RAM disponible | Motor | Modo | Velocidad est. |
+|-------|---------------|-------|------|----------------|
+| < 5,000 | Cualquiera | `openpyxl` | SEGURO 🔧 | ~5,000 / min |
+| 5k – 30k | < 4 GB | `openpyxl` | SEGURO 🔧 | ~5,000 / min |
+| 5k – 30k | ≥ 4 GB | `pandas` | TURBO 🚀 | ~20,000 / min |
+| > 30k | < 4 GB | `openpyxl` | MÍNIMO 🐢 | ~2,000 / min |
+| > 30k | ≥ 4 GB | `chunks` | CHUNKS 📦 | ~15,000 / min |
+| Cualquiera | < 2 GB | `openpyxl` | MÍNIMO 🐢 | ~2,000 / min |
+
+### Capacidad máxima estimada
+
+| Filas | Motor | Tiempo estimado |
+|-------|-------|-----------------|
+| 5,000 | openpyxl | ~1 min |
+| 30,000 | pandas | ~2 min |
+| 100,000 | chunks | ~7 min |
+| 500,000 | chunks | ~35 min |
+
+---
+
+## 03 · Fórmulas Auditables
+
+Las siguientes fórmulas se escriben como **fórmulas Excel vivas** en los 3 motores. Al pararte en cualquier celda se ve la operación completa.
+
+```
+sub1      = subtotal - descuento    → Base gravable real
+sub0      = iva0 + iva_exento       → Total no gravado
+sub2      = sub1 - sub0             → Base para IVA 16%
+iva_acred = sub2 × 0.16             → IVA que debería ser
+c_iva     = iva_acred - iva16       → Diferencia (0 = correcto)
+comprob   = total_cfdi - t2         → Delta total
+```
+
+| Columna | Fórmula | Descripción |
+|---------|---------|-------------|
+| `sub1` | `subtotal − descuento` | Base gravable real del gasto. Punto de partida de toda la validación. |
+| `sub0` | `IVA 0% + IVA Exento` | Total no gravado. Monto que NO genera IVA acreditable. |
+| `sub2` | `sub1 − sub0` | Base real para IVA 16%. La porción que SÍ genera IVA acreditable. |
+| `iva_acred` | `sub2 × 0.16` | IVA que *debería ser* según la base. Columna de validación clave. |
+| `c_iva` | `iva_acred − IVA declarado` | Diferencia. Si ≠ 0 hay discrepancia en el CFDI. |
+| `comprob` | `Total CFDI − T2` | Delta total. Verifica que todos los componentes sumen correctamente. |
+
+> ⚠️ Si `c_iva ≠ 0` hay discrepancia en el IVA del CFDI. Estas fórmulas permiten detectarla sin necesidad de recalcular manualmente.
+
+---
+
+## 04 · Instalación
+
+### ⚡ Mínimo requerido
 ```bash
 pip install openpyxl
 ```
 
-### Descargar
+### 🚀 Recomendado (activa los 3 motores)
 ```bash
-git clone https://github.com/tuusuario/readesf.git
-cd readesf
+pip install openpyxl pandas psutil
 ```
 
----
-
-## 📖 Uso Básico
-
-### 1. Preparar archivo Excel
-Coloca tu archivo Excel en:
-```
-Desktop/GASTOS RESICO/2026/ENERO26/
-```
-
-### 2. Ejecutar
+### 📦 Un solo comando
 ```bash
-python ReaDesF1.1.py
-```
-
-### 3. Ingresar nombre del archivo
-```
-Ingrese el nombre del archivo Excel (sin extensión .xlsx): facturas_enero
-```
-
-### 4. Resultado
-```
-✅ PROCESO COMPLETADO EXITOSAMENTE
-📂 Archivo guardado como: facturas_enero_validado.xlsx
-📊 Total de filas procesadas: 350
-⏱️  Tiempo total: 12.45 segundos
-⚡ Velocidad: 281 facturas/segundo
+pip install -r requirements.txt
 ```
 
 ---
 
-## ⚙️ Configuración
+## 05 · Estructura del Proyecto
 
-### Modos de Operación
-
-#### 🏢 Modo Producción (Predeterminado)
-```python
-MODO_ANONIMIZAR = False
-CREAR_LOG_AUDITORIA = True
 ```
-Para trabajo diario con datos reales.
-
-#### 🧪 Modo Desarrollo
-```python
-MODO_ANONIMIZAR = True
-CREAR_LOG_AUDITORIA = False
+ReaDesF1.8/
+  │
+  ├── main.py                   ← EJECUTAR ESTE
+  │
+  ├── analizador_sistema.py     ← RAM + CPU + archivo → motor
+  │
+  ├── motor_openpyxl.py         ← Computadoras básicas
+  ├── motor_pandas.py           ← Computadoras potentes
+  ├── motor_chunks.py           ← Archivos muy grandes +30k filas
+  │
+  ├── validaciones_fiscales.py  ← Reglas + fórmulas auditables
+  ├── seguridad.py              ← Privacidad y auditoría
+  │
+  ├── requirements.txt          ← pip install -r requirements.txt
+  └── README.md                 ← Este archivo
 ```
-Para pruebas y compartir archivos de forma segura.
-
-#### 📋 Modo Auditoría
-```python
-MODO_ANONIMIZAR = False
-CREAR_LOG_AUDITORIA = True
-LOG_DIRECTORY = "auditoria_2026"
-```
-Para cumplimiento normativo y trazabilidad.
-
-Ver [CONFIGURACION_RAPIDA_ReaDesF1.1.md](docs/CONFIGURACION_RAPIDA_ReaDesF1.1.md) para más detalles.
 
 ---
 
-## 📊 Características Técnicas
+## 06 · Historial de Versiones
 
-### Columnas que Crea
-- `SUB1-16%`: Subtotal con/sin IEPS
-- `SUB0%`: Base exenta (IVA 0%)
-- `SUB2-16%`: Base gravada al 16%
-- `IVA ACREDITABLE 16%`: IVA calculado
-- `C IVA`: Diferencia de IVA
-- `T2`: Total recalculado
-- `Comprobación T2`: Validación
-- `Deducible`: SI/NO
-- `Razón No Deducible`: Motivos de rechazo
-
-### Código de Colores
-- 🟦 **Azul**: Gasolina con IEPS / Régimen 626
-- 🟩 **Verde**: Deducible / IVA correcto
-- 🟥 **Rojo**: NO deducible
-- 🟪 **Morado**: Régimen 612
-- 🟧 **Naranja**: Gasolina sin IEPS
-- 🟨 **Amarillo**: Advertencia / Anonimizado
-- 🌸 **Rosa**: Dulces con IEPS 8%
+| Versión | Nombre | Mejora principal |
+|---------|--------|-----------------|
+| v1.2 | Reglas diferenciadas | Validación separada para Régimen 626 RESICO y Régimen 612 actividad empresarial |
+| v1.3 | Gasolina agrupada RESICO | Detección de despachos agrupados separados por `\|`. Facilidad RESICO aplicada correctamente |
+| v1.4 | Insumos agrícolas | 100+ palabras clave: fertilizantes, semillas, herbicidas, fungicidas, enmiendas de suelo |
+| v1.4.1 | Corrección legal crítica | Art. 147 LISR eliminado. Fundamento correcto: Art. 103 LISR |
+| v1.5 | headers_map O(1) | Índice de columnas como dict comprehension. Búsqueda instantánea |
+| v1.6 | Optimizaciones Nivel 1-3 | `iter_rows`, sets de palabras clave, cache, regex precompilado |
+| v1.7 | Adaptive Processing — 2 motores | Selección automática entre openpyxl y pandas según RAM y archivo |
+| **v1.8** ⭐ | **3 Motores + Vectorización + Chunks** | Motor chunks para +30k filas, masks vectorizadas, columnas `category`, fórmulas auditables en los 3 motores |
 
 ---
 
-## 📚 Documentación
+## 07 · Hoja de Ruta
 
-- [Guía Rápida de Configuración](docs/CONFIGURACION_RAPIDA_ReaDesF1.1.md)
-- [Guía Completa de Seguridad](docs/GUIA_SEGURIDAD_ReaDesF1.1.md)
-- [Análisis de Rendimiento](docs/ANALISIS_RENDIMIENTO.md)
+### 🟡 Ahora — v1.8
+- [x] Probar con datos reales
+- [x] Validar 3 motores
+- [x] Verificar fórmulas auditables
 
----
+### 🔴 Corto plazo — v1.9
+- [ ] Interfaz gráfica tkinter
+- [ ] `config.json` externo
+- [ ] Pruebas automatizadas
+- [ ] Notificación al terminar
 
-## 🔐 Seguridad y Privacidad
+### 🔵 Mediano plazo — v2.0
+- [ ] Reporte PDF automático
+- [ ] Dashboard de resultados
+- [ ] Detección de patrones
+- [ ] Comparativo histórico
 
-### Características
-- ✅ Procesamiento 100% local
-- ✅ Sin envío de datos a internet
-- ✅ Modo de anonimización
-- ✅ Log de auditoría con SHA256
-- ✅ Cumplimiento LFPDPPP
-
-### Advertencia
-⚠️ Este software procesa información fiscal **CONFIDENCIAL**. 
-- NO compartir archivos sin anonimizar
-- Cifrar archivos de salida si es necesario
-- Eliminar archivos temporales después de usar
-
----
-
-## 🎯 Casos de Uso
-
-### ✅ Contadores
-Validación rápida de deducibilidad de facturas de clientes.
-
-### ✅ Empresas RESICO
-Cumplimiento del régimen 626 con facilidades especiales.
-
-### ✅ Distribuidores
-Validación masiva de facturas con IEPS (dulces, botanas).
-
-### ✅ Gasolineras
-Validación especial de IEPS en combustibles.
+### ⬜ Largo plazo — v3.0
+- [ ] Instalador `.exe`
+- [ ] Versión despachos
+- [ ] Actualizaciones automáticas
+- [ ] Multiusuario
 
 ---
 
-## 🛠️ Reglas Fiscales Implementadas
+## Notas legales y de seguridad
 
-1. **Art. 27, Fracc. III LISR**: Efectivo >$2,000 NO deducible
-2. **Gasolina**: NUNCA en efectivo (excepto RESICO ≤$2,000)
-3. **IEPS 8%**: Se suma a SUB1
-4. **IEPS Gasolina**: Va a IVA 0%
-5. **Uso CFDI**: Solo G01, G02, G03 deducibles
-6. **Método de pago**: Solo PUE, PPD válidos
-7. **Forma de pago**: Según tipo de gasto
+- Información fiscal **confidencial**
+- Procesamiento **100% local** — ningún dato sale de tu computadora
+- Cumple **LFPDPPP** (Ley Federal de Protección de Datos Personales en Posesión de Particulares)
+- Fundamentos: **Art. 103 LISR** · **Art. 27 Fracc. III CFF** · **Régimen 612** · **Régimen 626 RESICO** · **IEPS 8%**
 
 ---
 
-## 📈 Roadmap
+<div align="center">
 
-### Versión 1.2 (Próximo)
-- [ ] Validación UUID contra API del SAT
-- [ ] Detección EFOS/EDOS
-- [ ] Cifrado automático de archivos
+**ReaDesF** · Sinergia REA · México 2026
 
-### Versión 1.3 (Futuro)
-- [ ] Complementos de pago
-- [ ] Validación de retenciones
-- [ ] Límites por tipo de gasto
+*Validador Fiscal Adaptativo — procesamiento local, fórmulas auditables, cumplimiento fiscal*
 
-### Versión 1.4 (Futuro)
-- [ ] Interfaz gráfica (GUI)
-- [ ] Integración con contabilidad electrónica
-- [ ] API REST
-
----
-
-## 🤝 Contribuir
-
-Las contribuciones son bienvenidas. Por favor:
-
-1. Fork el proyecto
-2. Crea una rama (`git checkout -b feature/nueva-funcionalidad`)
-3. Commit tus cambios (`git commit -am 'Agrega nueva funcionalidad'`)
-4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
-5. Abre un Pull Request
-
-### Reglas
-- ✅ Mantener compatibilidad con Python 3.8+
-- ✅ Documentar nuevas funcionalidades
-- ✅ Agregar tests cuando sea posible
-- ✅ Respetar privacidad de datos
-
----
-
-## 📝 Licencia
-
-Este proyecto está bajo la Licencia MIT. Ver [LICENSE](LICENSE) para más detalles.
-
----
-
-## ⚠️ Disclaimer Legal
-
-Este software es una **herramienta de apoyo** y NO sustituye:
-- Asesoría fiscal profesional
-- Validación oficial del SAT
-- Responsabilidad fiscal del contribuyente
-
-El usuario es responsable de:
-- Verificar resultados antes de usar
-- Cumplir con obligaciones fiscales
-- Proteger datos confidenciales
-
----
-
-## 👤 Autor
-
-Esleiter Ramiro Bustamante Ataxca
-
----
-
-## 📞 Soporte
-
-¿Preguntas? Abre un [Issue](https://github.com/tuusuario/readesf/issues)
-
----
-
-## 🙏 Agradecimientos
-
-
-- CP.Angelica Chagala Sixtega
-- Comunidad fiscal mexicana
-- Anthropic Claude por asistencia en desarrollo
-
-
----
-
-**⭐ Si te fue útil, dale una estrella al repositorio!**
+</div>

@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReaDesF1.8 — Sinergia REA</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --rosa:    #FF2D78;
+    --rosa-soft: #FF6BA8;
+    --amarillo:#FFD600;
+    --negro:   #0A0A0A;
+    --azul:    #0057FF;
+    --azul-soft:#3D8BFF;
+    --blanco:  #F7F7F2;
+    --gris:    #1A1A1A;
+    --gris2:   #2A2A2A;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--negro);
+    color: var(--blanco);
+    font-family: 'DM Sans', sans-serif;
+    overflow-x: hidden;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+    padding: 60px 20px;
+    text-align: center;
+  }
+
+  .hero-bg {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 20%, rgba(255,45,120,0.18) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 80% 80%, rgba(0,87,255,0.18) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 40% at 50% 50%, rgba(255,214,0,0.07) 0%, transparent 70%);
+    animation: bgPulse 8s ease-in-out infinite alternate;
+  }
+
+  @keyframes bgPulse {
+    from { opacity: 0.8; }
+    to   { opacity: 1.2; }
+  }
+
+  .grid-overlay {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,214,0,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,214,0,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .badge {
+    display: inline-block;
+    background: var(--amarillo);
+    color: var(--negro);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 3px;
+    padding: 6px 18px;
+    border-radius: 2px;
+    margin-bottom: 28px;
+    position: relative;
+    z-index: 1;
+    animation: fadeDown 0.8s ease both;
+  }
+
+  .hero-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(72px, 14vw, 160px);
+    letter-spacing: -2px;
+    line-height: 0.9;
+    position: relative;
+    z-index: 1;
+    animation: fadeUp 0.9s ease both 0.1s;
+  }
+
+  .hero-title .rea  { color: var(--rosa); }
+  .hero-title .des  { color: var(--blanco); }
+  .hero-title .f    { color: var(--amarillo); }
+  .hero-title .ver  {
+    color: var(--azul);
+    font-size: clamp(40px, 7vw, 80px);
+    display: block;
+    letter-spacing: 6px;
+  }
+
+  .hero-sub {
+    font-size: clamp(14px, 2vw, 18px);
+    color: rgba(247,247,242,0.6);
+    letter-spacing: 2px;
+    margin-top: 20px;
+    position: relative;
+    z-index: 1;
+    font-weight: 300;
+    animation: fadeUp 0.9s ease both 0.25s;
+  }
+
+  .hero-tags {
+    display: flex; flex-wrap: wrap; gap: 10px;
+    justify-content: center;
+    margin-top: 40px;
+    position: relative; z-index: 1;
+    animation: fadeUp 0.9s ease both 0.4s;
+  }
+
+  .tag {
+    padding: 7px 16px;
+    border-radius: 2px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    border: 1px solid;
+  }
+  .tag-rosa   { border-color: var(--rosa);    color: var(--rosa); }
+  .tag-azul   { border-color: var(--azul);    color: var(--azul-soft); }
+  .tag-amarillo { border-color: var(--amarillo); color: var(--amarillo); }
+
+  .scroll-hint {
+    position: absolute; bottom: 30px;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    color: rgba(247,247,242,0.3);
+    font-size: 11px; letter-spacing: 2px;
+    animation: bounce 2s ease-in-out infinite;
+    z-index: 1;
+  }
+  .scroll-hint::after {
+    content: '';
+    width: 1px; height: 40px;
+    background: linear-gradient(var(--amarillo), transparent);
+  }
+
+  @keyframes bounce {
+    0%,100% { transform: translateY(0); }
+    50%     { transform: translateY(8px); }
+  }
+
+  /* ── SECCIONES ── */
+  section { padding: 80px 20px; max-width: 1100px; margin: 0 auto; }
+
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 4px;
+    color: var(--rosa);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1; height: 1px;
+    background: linear-gradient(var(--rosa), transparent);
+    max-width: 200px;
+  }
+
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(36px, 6vw, 64px);
+    line-height: 1;
+    margin-bottom: 40px;
+  }
+
+  /* ── INICIO RÁPIDO ── */
+  .inicio-steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1px;
+    background: var(--gris2);
+    border: 1px solid var(--gris2);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .step {
+    background: var(--gris);
+    padding: 32px 28px;
+    position: relative;
+    transition: background 0.3s;
+  }
+  .step:hover { background: #222; }
+
+  .step-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 72px;
+    line-height: 1;
+    color: rgba(255,214,0,0.08);
+    position: absolute;
+    top: 16px; right: 20px;
+  }
+
+  .step-icon {
+    font-size: 28px;
+    margin-bottom: 14px;
+  }
+
+  .step-title {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--blanco);
+    margin-bottom: 10px;
+  }
+
+  .step-desc {
+    font-size: 13px;
+    color: rgba(247,247,242,0.55);
+    line-height: 1.6;
+  }
+
+  .step-accent { color: var(--amarillo); font-weight: 700; }
+  .step-cmd {
+    display: inline-block;
+    background: rgba(0,87,255,0.15);
+    border: 1px solid rgba(0,87,255,0.3);
+    color: var(--azul-soft);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 2px;
+    margin-top: 8px;
+  }
+
+  /* ── MOTORES ── */
+  .motores-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+  }
+
+  .motor-card {
+    border-radius: 4px;
+    padding: 28px 24px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+  .motor-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  }
+
+  .motor-card::before {
+    content: '';
+    position: absolute; inset: 0;
+    opacity: 0.06;
+    background: repeating-linear-gradient(
+      45deg, currentColor 0, currentColor 1px, transparent 1px, transparent 8px);
+  }
+
+  .motor-openpyxl { background: var(--gris); border: 1px solid #333; }
+  .motor-pandas   { background: linear-gradient(135deg, #001a4d, #002b80); border: 1px solid rgba(0,87,255,0.3); }
+  .motor-chunks   { background: linear-gradient(135deg, #4d0020, #800035); border: 1px solid rgba(255,45,120,0.3); }
+
+  .motor-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    padding: 3px 10px;
+    border-radius: 2px;
+    display: inline-block;
+    margin-bottom: 16px;
+  }
+  .badge-seguro  { background: rgba(255,214,0,0.15); color: var(--amarillo); }
+  .badge-turbo   { background: rgba(0,87,255,0.2);   color: var(--azul-soft); }
+  .badge-chunks  { background: rgba(255,45,120,0.2); color: var(--rosa-soft); }
+
+  .motor-icon  { font-size: 36px; margin-bottom: 12px; display: block; }
+  .motor-name  { font-family: 'Bebas Neue', sans-serif; font-size: 28px; margin-bottom: 8px; }
+  .motor-when  { font-size: 12px; color: rgba(247,247,242,0.5); margin-bottom: 16px; line-height: 1.5; }
+  .motor-speed {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--amarillo);
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding-top: 14px;
+    margin-top: 14px;
+  }
+
+  /* ── TABLA DE DECISIÓN ── */
+  .decision-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .decision-table th {
+    background: var(--rosa);
+    color: var(--negro);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    padding: 14px 20px;
+    text-align: left;
+    font-weight: 700;
+  }
+
+  .decision-table td {
+    padding: 14px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    color: rgba(247,247,242,0.75);
+  }
+
+  .decision-table tr { background: var(--gris); }
+  .decision-table tr:nth-child(even) { background: #1f1f1f; }
+  .decision-table tr:hover { background: #252525; }
+
+  .td-motor-op  { color: var(--amarillo); font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+  .td-motor-pa  { color: var(--azul-soft); font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+  .td-motor-ch  { color: var(--rosa-soft); font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+
+  /* ── FÓRMULAS AUDITABLES ── */
+  .formulas-box {
+    background: var(--gris);
+    border: 1px solid rgba(255,214,0,0.2);
+    border-radius: 4px;
+    padding: 40px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .formulas-box::before {
+    content: '⚖️';
+    font-size: 120px;
+    position: absolute;
+    right: -10px; top: -10px;
+    opacity: 0.04;
+    line-height: 1;
+  }
+
+  .formula-row {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    align-items: center;
+    gap: 20px;
+    padding: 16px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .formula-row:last-child { border-bottom: none; }
+
+  .formula-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--amarillo);
+    background: rgba(255,214,0,0.08);
+    padding: 6px 14px;
+    border-radius: 2px;
+    border-left: 3px solid var(--amarillo);
+  }
+
+  .formula-desc {
+    font-size: 13px;
+    color: rgba(247,247,242,0.6);
+    line-height: 1.5;
+  }
+
+  .formula-alert {
+    margin-top: 24px;
+    background: rgba(255,45,120,0.1);
+    border: 1px solid rgba(255,45,120,0.3);
+    border-radius: 3px;
+    padding: 16px 20px;
+    font-size: 13px;
+    color: var(--rosa-soft);
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  /* ── INSTALACIÓN ── */
+  .install-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+  }
+
+  .install-card {
+    background: var(--gris);
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid #2a2a2a;
+  }
+
+  .install-header {
+    padding: 14px 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .install-header.basico   { background: rgba(255,214,0,0.12); color: var(--amarillo); }
+  .install-header.recomend { background: rgba(0,87,255,0.12);  color: var(--azul-soft); }
+
+  .install-body {
+    padding: 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 2;
+    color: rgba(247,247,242,0.7);
+  }
+
+  .install-body .cmd { color: var(--blanco); }
+  .install-body .comment { color: rgba(247,247,242,0.3); }
+
+  /* ── VERSIONES ── */
+  .timeline {
+    position: relative;
+    padding-left: 30px;
+  }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 8px; bottom: 8px;
+    width: 2px;
+    background: linear-gradient(var(--rosa), var(--azul));
+  }
+
+  .timeline-item {
+    position: relative;
+    padding: 20px 0 20px 30px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .timeline-item:last-child { border-bottom: none; }
+
+  .timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -34px; top: 28px;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--gris2);
+    border: 2px solid var(--gris2);
+  }
+
+  .timeline-item.current::before {
+    background: var(--amarillo);
+    border-color: var(--amarillo);
+    box-shadow: 0 0 12px rgba(255,214,0,0.6);
+  }
+
+  .tv-ver {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--rosa-soft);
+    margin-bottom: 4px;
+    letter-spacing: 1px;
+  }
+
+  .tv-title {
+    font-weight: 700;
+    font-size: 15px;
+    margin-bottom: 4px;
+    color: var(--blanco);
+  }
+
+  .tv-desc {
+    font-size: 13px;
+    color: rgba(247,247,242,0.45);
+    line-height: 1.5;
+  }
+
+  .timeline-item.current .tv-title { color: var(--amarillo); }
+
+  /* ── ESTRUCTURA ── */
+  .file-tree {
+    background: var(--gris);
+    border-radius: 4px;
+    padding: 32px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 2.2;
+    border: 1px solid #2a2a2a;
+  }
+
+  .ft-folder { color: var(--amarillo); font-weight: 700; }
+  .ft-main   { color: var(--rosa); font-weight: 700; }
+  .ft-module { color: var(--azul-soft); }
+  .ft-config { color: rgba(247,247,242,0.5); }
+  .ft-comment{ color: rgba(247,247,242,0.25); font-size: 11px; }
+
+  /* ── ROADMAP ── */
+  .roadmap {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1px;
+    background: #222;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .rm-col {
+    background: var(--gris);
+    padding: 28px 24px;
+  }
+
+  .rm-phase {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 3px;
+    margin-bottom: 12px;
+    font-weight: 700;
+  }
+  .rm-phase.now    { color: var(--amarillo); }
+  .rm-phase.short  { color: var(--rosa-soft); }
+  .rm-phase.medium { color: var(--azul-soft); }
+  .rm-phase.long   { color: rgba(247,247,242,0.4); }
+
+  .rm-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    margin-bottom: 16px;
+  }
+
+  .rm-item {
+    font-size: 12px;
+    color: rgba(247,247,242,0.55);
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    display: flex;
+    gap: 8px;
+  }
+
+  .rm-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 5px;
+  }
+  .dot-now    { background: var(--amarillo); }
+  .dot-short  { background: var(--rosa); }
+  .dot-medium { background: var(--azul); }
+  .dot-long   { background: #444; }
+
+  /* ── FOOTER ── */
+  footer {
+    background: var(--gris);
+    border-top: 1px solid #222;
+    padding: 60px 20px;
+    text-align: center;
+  }
+
+  .footer-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 48px;
+    letter-spacing: 6px;
+    margin-bottom: 8px;
+  }
+  .footer-logo .f-rea { color: var(--rosa); }
+  .footer-logo .f-des { color: var(--blanco); }
+  .footer-logo .f-f   { color: var(--amarillo); }
+
+  .footer-sub {
+    font-size: 12px;
+    color: rgba(247,247,242,0.3);
+    letter-spacing: 3px;
+    margin-bottom: 28px;
+  }
+
+  .footer-tags {
+    display: flex; flex-wrap: wrap;
+    justify-content: center; gap: 8px;
+    margin-bottom: 32px;
+  }
+
+  .footer-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: rgba(247,247,242,0.3);
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 4px 12px;
+    border-radius: 2px;
+  }
+
+  .footer-legal {
+    font-size: 11px;
+    color: rgba(247,247,242,0.2);
+    line-height: 1.8;
+  }
+
+  /* ── ANIMACIONES ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ── DIVIDER ── */
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--rosa), var(--amarillo), var(--azul), transparent);
+    margin: 0;
+    opacity: 0.3;
+  }
+
+  /* ── HIGHLIGHT BOX ── */
+  .highlight {
+    background: linear-gradient(135deg, rgba(255,45,120,0.08), rgba(0,87,255,0.08));
+    border: 1px solid rgba(255,214,0,0.15);
+    border-radius: 4px;
+    padding: 28px 32px;
+    margin-bottom: 32px;
+  }
+
+  .highlight p {
+    font-size: 15px;
+    color: rgba(247,247,242,0.7);
+    line-height: 1.8;
+  }
+
+  .highlight strong { color: var(--amarillo); }
+
+  @media (max-width: 600px) {
+    .formula-row { grid-template-columns: 1fr; }
+    .file-tree   { font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     HERO
+══════════════════════════════════════════ -->
+<div class="hero">
+  <div class="hero-bg"></div>
+  <div class="grid-overlay"></div>
+
+  <div class="badge">SINERGIA REA — VALIDADOR FISCAL v1.8</div>
+
+  <h1 class="hero-title">
+    <span class="rea">Rea</span><span class="des">Des</span><span class="f">F</span>
+    <span class="ver">1.8</span>
+  </h1>
+
+  <p class="hero-sub">ADAPTIVE PROCESSING &nbsp;·&nbsp; 3 MOTORES &nbsp;·&nbsp; FÓRMULAS AUDITABLES</p>
+
+  <div class="hero-tags">
+    <span class="tag tag-rosa">RÉGIMEN 612</span>
+    <span class="tag tag-azul">RÉGIMEN 626 RESICO</span>
+    <span class="tag tag-amarillo">ART. 103 LISR</span>
+    <span class="tag tag-rosa">ART. 27 FRACC. III</span>
+    <span class="tag tag-azul">IEPS 8%</span>
+    <span class="tag tag-amarillo">INSUMOS AGRÍCOLAS</span>
+  </div>
+
+  <div class="scroll-hint">SCROLL</div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ══════════════════════════════════════════
+     INICIO RÁPIDO
+══════════════════════════════════════════ -->
+<section class="reveal">
+  <div class="section-label">01 &nbsp; INICIO RÁPIDO</div>
+  <h2 class="section-title">Cómo <span style="color:var(--rosa)">ejecutar</span><br>el validador</h2>
+
+  <div class="highlight">
+    <p>Solo necesitas ejecutar <strong>main.py</strong>. El programa analiza tu computadora automáticamente, elige el motor óptimo y procesa las facturas. <strong>No necesitas configurar nada manualmente.</strong></p>
+  </div>
+
+  <div class="inicio-steps">
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-icon">📦</div>
+      <div class="step-title">Instalar dependencias</div>
+      <div class="step-desc">
+        Abre tu terminal en la carpeta <span class="step-accent">ReaDesF1.8/</span> y ejecuta:
+        <br><div class="step-cmd">pip install openpyxl pandas psutil</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-icon">📁</div>
+      <div class="step-title">Colocar el archivo Excel</div>
+      <div class="step-desc">
+        Pon tu archivo de facturas en:<br>
+        <span class="step-accent">Desktop / GASTOS RESICO / 2026 / FEBRERO26</span>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-icon">▶️</div>
+      <div class="step-title">Ejecutar main.py</div>
+      <div class="step-desc">
+        Desde la terminal, dentro de la carpeta del proyecto:
+        <br><div class="step-cmd">python main.py</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-icon">🖥️</div>
+      <div class="step-title">Análisis automático</div>
+      <div class="step-desc">
+        El programa mide tu <span class="step-accent">RAM</span> y el tamaño del archivo y elige el mejor motor sin que hagas nada.
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-icon">📝</div>
+      <div class="step-title">Escribe el nombre del archivo</div>
+      <div class="step-desc">
+        Solo escribe el nombre <span class="step-accent">sin .xlsx</span>. El programa lo agrega automáticamente.
+        <br><div class="step-cmd">GASTOS FEBRERO</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-icon">✅</div>
+      <div class="step-title">Resultado listo</div>
+      <div class="step-desc">
+        Se guarda como <span class="step-accent">NOMBRE_validado.xlsx</span> en la misma carpeta con colores, fórmulas y razones.
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══════════════════════════════════════════
+     MOTORES
+══════════════════════════════════════════ -->
+<section class="reveal">
+  <div class="section-label">02 &nbsp; MOTORES</div>
+  <h2 class="section-title">3 motores<br><span style="color:var(--amarillo)">adaptativos</span></h2>
+
+  <div class="motores-grid">
+
+    <div class="motor-card motor-openpyxl">
+      <span class="motor-badge badge-seguro">🔧 SEGURO / 🐢 MÍNIMO</span>
+      <span class="motor-icon">⚙️</span>
+      <div class="motor-name" style="color:var(--amarillo)">openpyxl</div>
+      <div class="motor-when">
+        RAM &lt; 4 GB o archivo &lt; 5,000 filas.<br>
+        Estable en cualquier computadora.<br>
+        Fórmulas auditables garantizadas.
+      </div>
+      <div class="motor-speed">⚡ ~5,000 facturas / min</div>
+    </div>
+
+    <div class="motor-card motor-pandas">
+      <span class="motor-badge badge-turbo">🚀 TURBO</span>
+      <span class="motor-icon">🐼</span>
+      <div class="motor-name" style="color:var(--azul-soft)">pandas</div>
+      <div class="motor-when">
+        RAM ≥ 4 GB + 5,000–30,000 filas.<br>
+        Detección vectorizada completa.<br>
+        Columnas a category (70% menos RAM).
+      </div>
+      <div class="motor-speed" style="color:var(--azul-soft)">⚡ ~20,000 facturas / min</div>
+    </div>
+
+    <div class="motor-card motor-chunks">
+      <span class="motor-badge badge-chunks">📦 CHUNKS</span>
+      <span class="motor-icon">🧩</span>
+      <div class="motor-name" style="color:var(--rosa-soft)">pandas chunks</div>
+      <div class="motor-when">
+        RAM ≥ 4 GB + &gt; 30,000 filas.<br>
+        Bloques de 5,000 filas. RAM constante.<br>
+        Hasta 500,000 facturas posible.
+      </div>
+      <div class="motor-speed" style="color:var(--rosa-soft)">⚡ ~15,000 facturas / min</div>
+    </div>
+
+  </div>
+
+  <br><br>
+
+  <h3 style="font-family:'Bebas Neue';font-size:28px;margin-bottom:20px;color:var(--blanco)">
+    Tabla de decisión automática
+  </h3>
+
+  <table class="decision-table">
+    <thead>
+      <tr>
+        <th>FILAS</th>
+        <th>RAM DISPONIBLE</th>
+        <th>MOTOR</th>
+        <th>MODO</th>
+        <th>VELOCIDAD EST.</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>&lt; 5,000</td>
+        <td>Cualquiera</td>
+        <td class="td-motor-op">openpyxl</td>
+        <td>SEGURO 🔧</td>
+        <td>~5,000 / min</td>
+      </tr>
+      <tr>
+        <td>5k – 30k</td>
+        <td>&lt; 4 GB</td>
+        <td class="td-motor-op">openpyxl</td>
+        <td>SEGURO 🔧</td>
+        <td>~5,000 / min</td>
+      </tr>
+      <tr>
+        <td>5k – 30k</td>
+        <td>≥ 4 GB</td>
+        <td class="td-motor-pa">pandas</td>
+        <td>TURBO 🚀</td>
+        <td>~20,000 / min</td>
+      </tr>
+      <tr>
+        <td>&gt; 30k</td>
+        <td>&lt; 4 GB</td>
+        <td class="td-motor-op">openpyxl</td>
+        <td>MÍNIMO 🐢</td>
+        <td>~2,000 / min</td>
+      </tr>
+      <tr>
+        <td>&gt; 30k</td>
+        <td>≥ 4 GB</td>
+        <td class="td-motor-ch">chunks</td>
+        <td>CHUNKS 📦</td>
+        <td>~15,000 / min</td>
+      </tr>
+      <tr>
+        <td>Cualquiera</td>
+        <td>&lt; 2 GB</td>
+        <td class="td-motor-op">openpyxl</td>
+        <td>MÍNIMO 🐢</td>
+        <td>~2,000 / min</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══════════════════════════════════════════
+     FÓRMULAS AUDITABLES
+══════════════════════════════════════════ -->
+<section class="reveal">
+  <div class="section-label">03 &nbsp; VALIDACIÓN CONTABLE</div>
+  <h2 class="section-title">Fórmulas<br><span style="color:var(--amarillo)">auditables</span></h2>
+
+  <div class="formulas-box">
+
+    <div class="formula-row">
+      <div class="formula-name">sub1 =</div>
+      <div class="formula-desc">
+        <strong style="color:var(--blanco)">subtotal − descuento</strong><br>
+        Base gravable real del gasto. Punto de partida de toda la validación.
+      </div>
+    </div>
+
+    <div class="formula-row">
+      <div class="formula-name">sub0 =</div>
+      <div class="formula-desc">
+        <strong style="color:var(--blanco)">IVA 0% + IVA Exento</strong><br>
+        Total no gravado. Monto que NO genera IVA acreditable.
+      </div>
+    </div>
+
+    <div class="formula-row">
+      <div class="formula-name">sub2 =</div>
+      <div class="formula-desc">
+        <strong style="color:var(--blanco)">sub1 − sub0</strong><br>
+        Base real para IVA 16%. La porción que SÍ genera IVA acreditable.
+      </div>
+    </div>
+
+    <div class="formula-row">
+      <div class="formula-name">iva_acred =</div>
+      <div class="formula-desc">
+        <strong style="color:var(--blanco)">sub2 × 0.16</strong><br>
+        IVA que <em>debería ser</em> según la base. Columna de validación clave.
+      </div>
+    </div>
+
+    <div class="formula-row">
+      <div class="formula-name">c_iva =</div>
+      <div class="formula-desc">
+        <strong style="color:var(--blanco)">iva_acred − IVA declarado</strong><br>
+        Diferencia. Si ≠ 0 hay discrepancia en el CFDI.
+      </div>
+    </div>
+
+    <div class="formula-row">
+      <div class="formula-name">comprob =</div>
+      <div class="formula-desc">
+        <strong style="color:var(--blanco)">Total CFDI − T2</strong><br>
+        Delta total. Verifica que todos los componentes sumen correctamente.
+      </div>
+    </div>
+
+    <div class="formula-alert">
+      <span>⚠️</span>
+      <div>
+        Estas fórmulas se escriben como <strong>fórmulas Excel vivas</strong> en los 3 motores. Al pararse en cualquier celda se ve la operación completa. Permiten detectar discrepancias en el IVA desglosado del CFDI sin necesidad de recalcular manualmente.
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══════════════════════════════════════════
+     INSTALACIÓN
+══════════════════════════════════════════ -->
+<section class="reveal">
+  <div class="section-label">04 &nbsp; INSTALACIÓN</div>
+  <h2 class="section-title">Preparar<br><span style="color:var(--rosa)">el entorno</span></h2>
+
+  <div class="install-grid">
+
+    <div class="install-card">
+      <div class="install-header basico">⚡ MÍNIMO REQUERIDO</div>
+      <div class="install-body">
+        <div class="comment"># Solo openpyxl</div>
+        <div class="cmd">pip install openpyxl</div>
+        <br>
+        <div class="comment"># Activa motor: openpyxl</div>
+        <div class="comment"># Para cualquier computadora</div>
+      </div>
+    </div>
+
+    <div class="install-card">
+      <div class="install-header recomend">🚀 RECOMENDADO</div>
+      <div class="install-body">
+        <div class="comment"># Todos los motores activos</div>
+        <div class="cmd">pip install openpyxl</div>
+        <div class="cmd">pip install pandas</div>
+        <div class="cmd">pip install psutil</div>
+        <br>
+        <div class="comment"># Activa los 3 motores</div>
+      </div>
+    </div>
+
+    <div class="install-card">
+      <div class="install-header basico" style="background:rgba(255,45,120,0.12);color:var(--rosa-soft)">📦 UN SOLO COMANDO</div>
+      <div class="install-body">
+        <div class="comment"># Instala todo junto</div>
+        <div class="cmd">pip install -r</div>
+        <div class="cmd">requirements.txt</div>
+        <br>
+        <div class="comment"># Incluido en ReaDesF1.8/</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══════════════════════════════════════════
+     ESTRUCTURA
+══════════════════════════════════════════ -->
+<section class="reveal">
+  <div class="section-label">05 &nbsp; ESTRUCTURA DEL PROYECTO</div>
+  <h2 class="section-title">Arquitectura<br><span style="color:var(--azul-soft)">modular</span></h2>
+
+  <div class="file-tree">
+    <div><span class="ft-folder">ReaDesF1.8/</span></div>
+    <div>&nbsp;&nbsp;│</div>
+    <div>&nbsp;&nbsp;├── <span class="ft-main">main.py</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="ft-comment">← EJECUTAR ESTE</span></div>
+    <div>&nbsp;&nbsp;│</div>
+    <div>&nbsp;&nbsp;├── <span class="ft-module">analizador_sistema.py</span> &nbsp;&nbsp;&nbsp;<span class="ft-comment">← RAM + CPU + archivo → motor</span></div>
+    <div>&nbsp;&nbsp;│</div>
+    <div>&nbsp;&nbsp;├── <span class="ft-module">motor_openpyxl.py</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="ft-comment">← Computadoras básicas</span></div>
+    <div>&nbsp;&nbsp;├── <span class="ft-module">motor_pandas.py</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="ft-comment">← Computadoras potentes</span></div>
+    <div>&nbsp;&nbsp;├── <span class="ft-module">motor_chunks.py</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="ft-comment">← Archivos muy grandes +30k filas</span></div>
+    <div>&nbsp;&nbsp;│</div>
+    <div>&nbsp;&nbsp;├── <span class="ft-module">validaciones_fiscales.py</span> <span class="ft-comment">← Reglas + fórmulas auditables</span></div>
+    <div>&nbsp;&nbsp;├── <span class="ft-config">seguridad.py</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="ft-comment">← Privacidad y auditoría</span></div>
+    <div>&nbsp;&nbsp;│</div>
+    <div>&nbsp;&nbsp;├── <span class="ft-config">requirements.txt</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="ft-comment">← pip install -r requirements.txt</span></div>
+    <div>&nbsp;&nbsp;└── <span class="ft-config">README.html</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="ft-comment">← Este archivo</span></div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══════════════════════════════════════════
+     VERSIONES
+══════════════════════════════════════════ -->
+<section class="reveal">
+  <div class="section-label">06 &nbsp; HISTORIAL</div>
+  <h2 class="section-title">Evolución<br><span style="color:var(--rosa)">del proyecto</span></h2>
+
+  <div class="timeline">
+
+    <div class="timeline-item">
+      <div class="tv-ver">v1.2</div>
+      <div class="tv-title">Reglas diferenciadas</div>
+      <div class="tv-desc">Validación separada para Régimen 626 RESICO y Régimen 612 actividad empresarial.</div>
+    </div>
+
+    <div class="timeline-item">
+      <div class="tv-ver">v1.3</div>
+      <div class="tv-title">Gasolina agrupada RESICO</div>
+      <div class="tv-desc">Detección de despachos agrupados separados por "|". Facilidad RESICO aplicada correctamente.</div>
+    </div>
+
+    <div class="timeline-item">
+      <div class="tv-ver">v1.4</div>
+      <div class="tv-title">Insumos agrícolas</div>
+      <div class="tv-desc">100+ palabras clave: fertilizantes, semillas, herbicidas, fungicidas, enmiendas de suelo.</div>
+    </div>
+
+    <div class="timeline-item">
+      <div class="tv-ver">v1.4.1</div>
+      <div class="tv-title">Corrección legal crítica</div>
+      <div class="tv-desc">Art. 147 LISR eliminado (deducciones personales). Fundamento correcto: Art. 103 LISR.</div>
+    </div>
+
+    <div class="timeline-item">
+      <div class="tv-ver">v1.5</div>
+      <div class="tv-title">headers_map O(1)</div>
+      <div class="tv-desc">Índice de columnas como dict comprehension. Búsqueda instantánea en lugar de recorrer fila completa.</div>
+    </div>
+
+    <div class="timeline-item">
+      <div class="tv-ver">v1.6</div>
+      <div class="tv-title">Optimizaciones Nivel 1-3</div>
+      <div class="tv-desc">iter_rows, sets de palabras clave, cache de conceptos, regex precompilado, print cada 1,000 filas.</div>
+    </div>
+
+    <div class="timeline-item">
+      <div class="tv-ver">v1.7</div>
+      <div class="tv-title">Adaptive Processing — 2 motores</div>
+      <div class="tv-desc">Arquitectura modular. Selección automática entre openpyxl y pandas según RAM y tamaño del archivo.</div>
+    </div>
+
+    <div class="timeline-item current">
+      <div class="tv-ver">v1.8 — ACTUAL</div>
+      <div class="tv-title">3 Motores + Vectorización + Chunks + Fórmulas Auditables</div>
+      <div class="tv-desc">
+        Motor chunks para +30k filas. Masks vectorizadas (reemplaza iterrows). Columnas a category (70% menos RAM).
+        Fórmulas sub1/sub0/sub2/iva_acred garantizadas en los 3 motores como fórmulas Excel vivas.
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══════════════════════════════════════════
+     ROADMAP
+══════════════════════════════════════════ -->
+<section class="reveal">
+  <div class="section-label">07 &nbsp; HOJA DE RUTA</div>
+  <h2 class="section-title">Lo que<br><span style="color:var(--amarillo)">viene después</span></h2>
+
+  <div class="roadmap">
+
+    <div class="rm-col">
+      <div class="rm-phase now">● AHORA</div>
+      <div class="rm-title" style="color:var(--amarillo)">v1.8</div>
+      <div class="rm-item"><div class="rm-dot dot-now"></div>Probar con datos reales</div>
+      <div class="rm-item"><div class="rm-dot dot-now"></div>Validar 3 motores</div>
+      <div class="rm-item"><div class="rm-dot dot-now"></div>Verificar fórmulas auditables</div>
+    </div>
+
+    <div class="rm-col">
+      <div class="rm-phase short">● CORTO PLAZO</div>
+      <div class="rm-title" style="color:var(--rosa-soft)">v1.9</div>
+      <div class="rm-item"><div class="rm-dot dot-short"></div>Interfaz gráfica tkinter</div>
+      <div class="rm-item"><div class="rm-dot dot-short"></div>config.json externo</div>
+      <div class="rm-item"><div class="rm-dot dot-short"></div>Pruebas automatizadas</div>
+      <div class="rm-item"><div class="rm-dot dot-short"></div>Notificación al terminar</div>
+    </div>
+
+    <div class="rm-col">
+      <div class="rm-phase medium">● MEDIANO PLAZO</div>
+      <div class="rm-title" style="color:var(--azul-soft)">v2.0</div>
+      <div class="rm-item"><div class="rm-dot dot-medium"></div>Reporte PDF automático</div>
+      <div class="rm-item"><div class="rm-dot dot-medium"></div>Dashboard de resultados</div>
+      <div class="rm-item"><div class="rm-dot dot-medium"></div>Detección de patrones</div>
+      <div class="rm-item"><div class="rm-dot dot-medium"></div>Comparativo histórico</div>
+    </div>
+
+    <div class="rm-col">
+      <div class="rm-phase long">● LARGO PLAZO</div>
+      <div class="rm-title" style="color:rgba(247,247,242,0.5)">v3.0</div>
+      <div class="rm-item"><div class="rm-dot dot-long"></div>Instalador .exe</div>
+      <div class="rm-item"><div class="rm-dot dot-long"></div>Versión despachos</div>
+      <div class="rm-item"><div class="rm-dot dot-long"></div>Actualizaciones automáticas</div>
+      <div class="rm-item"><div class="rm-dot dot-long"></div>Multiusuario</div>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══════════════════════════════════════════
+     FOOTER
+══════════════════════════════════════════ -->
+<footer>
+  <div class="footer-logo">
+    <span class="f-rea">Rea</span><span class="f-des">Des</span><span class="f-f">F</span>
+  </div>
+  <div class="footer-sub">VALIDADOR FISCAL ADAPTATIVO · SINERGIA REA · MÉXICO 2026</div>
+
+  <div class="footer-tags">
+    <span class="footer-tag">ART. 103 LISR</span>
+    <span class="footer-tag">ART. 27 FRACC. III</span>
+    <span class="footer-tag">RÉGIMEN 612</span>
+    <span class="footer-tag">RÉGIMEN 626 RESICO</span>
+    <span class="footer-tag">IEPS 8%</span>
+    <span class="footer-tag">INSUMOS AGRÍCOLAS</span>
+    <span class="footer-tag">ADAPTIVE PROCESSING</span>
+    <span class="footer-tag">FÓRMULAS AUDITABLES</span>
+  </div>
+
+  <div class="footer-legal">
+    Información fiscal confidencial · Procesamiento 100% local · Cumple LFPDPPP<br>
+    ReaDesF1.8 · Sinergia REA · Marzo 2026
+  </div>
+</footer>
+
+<script>
+  // Reveal on scroll
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>
