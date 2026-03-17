@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ReaDesF1.8 — Sinergia REA</title>
+<title>ReaDesF1.9 — Sinergia REA</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -659,14 +659,14 @@
   <div class="hero-bg"></div>
   <div class="grid-overlay"></div>
 
-  <div class="badge">SINERGIA REA — VALIDADOR FISCAL v1.8</div>
+  <div class="badge">SINERGIA REA — VALIDADOR FISCAL v1.9</div>
 
   <h1 class="hero-title">
     <span class="rea">Rea</span><span class="des">Des</span><span class="f">F</span>
-    <span class="ver">1.8</span>
+    <span class="ver">1.9</span>
   </h1>
 
-  <p class="hero-sub">ADAPTIVE PROCESSING &nbsp;·&nbsp; 3 MOTORES &nbsp;·&nbsp; FÓRMULAS AUDITABLES</p>
+  <p class="hero-sub">ADAPTIVE PROCESSING &nbsp;·&nbsp; 3 MOTORES &nbsp;·&nbsp; FÓRMULAS AUDITABLES &nbsp;·&nbsp; DASHBOARD HTML &nbsp;·&nbsp; DIOT</p>
 
   <div class="hero-tags">
     <span class="tag tag-rosa">RÉGIMEN 612</span>
@@ -675,6 +675,8 @@
     <span class="tag tag-rosa">ART. 27 FRACC. III</span>
     <span class="tag tag-azul">IEPS 8%</span>
     <span class="tag tag-amarillo">INSUMOS AGRÍCOLAS</span>
+    <span class="tag tag-rosa">DIOT</span>
+    <span class="tag tag-azul">DASHBOARD HTML</span>
   </div>
 
   <div class="scroll-hint">SCROLL</div>
@@ -708,20 +710,20 @@
     <div class="step">
       <div class="step-num">2</div>
       <div class="step-icon">📁</div>
-      <div class="step-title">Colocar el archivo Excel</div>
+      <div class="step-title">Ejecutar main.py</div>
       <div class="step-desc">
-        Pon tu archivo de facturas en:<br>
-        <span class="step-accent">Desktop / GASTOS RESICO / 2026 / FEBRERO26</span>
+        Desde la terminal, dentro de la carpeta del proyecto:
+        <br><div class="step-cmd">python main.py</div>
       </div>
     </div>
 
     <div class="step">
       <div class="step-num">3</div>
       <div class="step-icon">▶️</div>
-      <div class="step-title">Ejecutar main.py</div>
+      <div class="step-title">Seleccionar carpeta y archivo</div>
       <div class="step-desc">
-        Desde la terminal, dentro de la carpeta del proyecto:
-        <br><div class="step-cmd">python main.py</div>
+        El programa solicita la carpeta y el nombre del archivo <span class="step-accent">sin .xlsx</span>.
+        <br><div class="step-cmd">GASTOS FEBRERO</div>
       </div>
     </div>
 
@@ -737,19 +739,22 @@
     <div class="step">
       <div class="step-num">5</div>
       <div class="step-icon">📝</div>
-      <div class="step-title">Escribe el nombre del archivo</div>
+      <div class="step-title">Indica el mes del reporte</div>
       <div class="step-desc">
-        Solo escribe el nombre <span class="step-accent">sin .xlsx</span>. El programa lo agrega automáticamente.
-        <br><div class="step-cmd">GASTOS FEBRERO</div>
+        Escribe el mes cuando se solicite:
+        <br><div class="step-cmd">FEBRERO 2026</div>
       </div>
     </div>
 
     <div class="step">
       <div class="step-num">6</div>
       <div class="step-icon">✅</div>
-      <div class="step-title">Resultado listo</div>
+      <div class="step-title">3 archivos listos</div>
       <div class="step-desc">
-        Se guarda como <span class="step-accent">NOMBRE_validado.xlsx</span> en la misma carpeta con colores, fórmulas y razones.
+        Se generan en la misma carpeta:<br>
+        <span class="step-accent">NOMBRE_validado.xlsx</span> · colores y fórmulas<br>
+        <span class="step-accent">NOMBRE_reporte.xlsx</span> · tabla auditable<br>
+        <span class="step-accent">NOMBRE_reporte.html</span> · dashboard interactivo
       </div>
     </div>
 
@@ -930,7 +935,169 @@
     <div class="formula-alert">
       <span>⚠️</span>
       <div>
-        Estas fórmulas se escriben como <strong>fórmulas Excel vivas</strong> en los 3 motores. Al pararse en cualquier celda se ve la operación completa. Permiten detectar discrepancias en el IVA desglosado del CFDI sin necesidad de recalcular manualmente.
+        Estas fórmulas se escriben como <strong>fórmulas Excel vivas</strong> en los 3 motores. Al pararse en cualquier celda se ve la operación completa. En v1.9, cada celda también lleva el <strong>valor numérico cacheado en el XML</strong> del archivo — el generador de reportes las lee directamente sin necesitar que Excel las evalúe primero.
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══════════════════════════════════════════
+     ARCHIVOS DE SALIDA
+══════════════════════════════════════════ -->
+<section class="reveal">
+  <div class="section-label">04 &nbsp; ARCHIVOS DE SALIDA</div>
+  <h2 class="section-title">3 archivos<br><span style="color:var(--amarillo)">generados</span></h2>
+
+  <div class="motores-grid">
+
+    <div class="motor-card motor-openpyxl">
+      <span class="motor-badge badge-seguro">PASO 2</span>
+      <span class="motor-icon">📊</span>
+      <div class="motor-name" style="color:var(--amarillo)">_validado.xlsx</div>
+      <div class="motor-when">
+        Todas las facturas con colores por régimen y deducibilidad.
+        Fórmulas auditables vivas + valor cacheado en XML.
+        Columnas SUB1, SUB0, SUB2, IVA ACRED, C IVA, T2.
+      </div>
+      <div class="motor-speed">🟦 626 · 🟪 612 · 🟩 DED · 🟥 NO DED · 🟨 CP01</div>
+    </div>
+
+    <div class="motor-card motor-pandas">
+      <span class="motor-badge badge-turbo">PASO 3</span>
+      <span class="motor-icon">📋</span>
+      <div class="motor-name" style="color:var(--azul-soft)">_reporte.xlsx</div>
+      <div class="motor-when">
+        Tabla auditable resumida con una fila por factura.
+        Columnas de estatus, montos desglosados y observaciones CP01.
+        Fórmulas auditables para validación del contador.
+      </div>
+      <div class="motor-speed" style="color:var(--azul-soft)">DED · EFE · NO DED · PEND · EGRESO · CP01</div>
+    </div>
+
+    <div class="motor-card motor-chunks">
+      <span class="motor-badge badge-chunks">PASO 3</span>
+      <span class="motor-icon">🌐</span>
+      <div class="motor-name" style="color:var(--rosa-soft)">_reporte.html</div>
+      <div class="motor-when">
+        Dashboard interactivo completo. Filtros por estatus, buscador en tiempo real,
+        estatus editable con persistencia localStorage.
+        DIOT integrada desplegable. Contadores dinámicos.
+      </div>
+      <div class="motor-speed" style="color:var(--rosa-soft)">Abre en cualquier navegador · Sin instalación</div>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══════════════════════════════════════════
+     DIOT
+══════════════════════════════════════════ -->
+<section class="reveal">
+  <div class="section-label">05 &nbsp; DIOT</div>
+  <h2 class="section-title">Informativa de<br><span style="color:var(--rosa)">operaciones con terceros</span></h2>
+
+  <div class="highlight">
+    <p>En v1.9 el reporte HTML incluye la <strong>DIOT mensual</strong> generada automáticamente desde las facturas deducibles. Se despliega al hacer clic en la tarjeta <strong>DEDUCIBLES</strong> del dashboard y se actualiza en tiempo real cuando cambias el estatus de cualquier factura.</p>
+  </div>
+
+  <div class="formulas-box">
+
+    <div class="formula-row">
+      <div class="formula-name">RAZÓN SOCIAL</div>
+      <div class="formula-desc">
+        <strong style="color:var(--blanco)">Razon emisor del _validado</strong><br>
+        Nombre del proveedor agrupado.
+      </div>
+    </div>
+
+    <div class="formula-row">
+      <div class="formula-name">RFC</div>
+      <div class="formula-desc">
+        <strong style="color:var(--blanco)">RFC emisor del _validado</strong><br>
+        Clave única del proveedor — agrupa todas sus facturas del mes.
+      </div>
+    </div>
+
+    <div class="formula-row">
+      <div class="formula-name">ACT. 16%</div>
+      <div class="formula-desc">
+        <strong style="color:var(--blanco)">Suma de SUB2-16% por proveedor</strong><br>
+        Base gravable al 16% de todas las facturas deducibles.
+      </div>
+    </div>
+
+    <div class="formula-row">
+      <div class="formula-name">IVA PAGADO</div>
+      <div class="formula-desc">
+        <strong style="color:var(--blanco)">Suma de IVA 16% por proveedor</strong><br>
+        IVA acreditable total del proveedor en el mes.
+      </div>
+    </div>
+
+    <div class="formula-row">
+      <div class="formula-name">ACT. TASA 0%</div>
+      <div class="formula-desc">
+        <strong style="color:var(--blanco)">Suma de SUB0% por proveedor</strong><br>
+        Monto no gravado — incluye IEPS gasolina correctamente separado.
+      </div>
+    </div>
+
+    <div class="formula-alert">
+      <span>✅</span>
+      <div>
+        Solo incluye facturas con estatus <strong>DED</strong> y <strong>EFE</strong>.
+        Excluye automáticamente <strong>COMPLEMENTO CP01</strong> y <strong>PENDIENTE PPD</strong>.
+        Al cambiar el estatus de una factura en el dashboard, la DIOT se recalcula al instante.
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══════════════════════════════════════════
+     COMPLEMENTOS CP01
+══════════════════════════════════════════ -->
+<section class="reveal">
+  <div class="section-label">06 &nbsp; COMPLEMENTOS CP01</div>
+  <h2 class="section-title">Cruce automático<br><span style="color:var(--azul-soft)">PPD ↔ CP01</span></h2>
+
+  <div class="formulas-box">
+
+    <div class="formula-row">
+      <div class="formula-name">Nivel 1</div>
+      <div class="formula-desc">
+        <strong style="color:var(--blanco)">UUID explícito — columna UUIDs relacionados</strong><br>
+        Cuando el _validado incluye el UUID del PPD pagado directamente.
+      </div>
+    </div>
+
+    <div class="formula-row">
+      <div class="formula-name">Nivel 2</div>
+      <div class="formula-desc">
+        <strong style="color:var(--blanco)">RFC emisor + Total idéntico</strong><br>
+        Cuando la columna UUIDs relacionados viene vacía — el sistema cruza por RFC y monto igual.
+      </div>
+    </div>
+
+    <div class="formula-row">
+      <div class="formula-name">OBS</div>
+      <div class="formula-desc">
+        <strong style="color:var(--blanco)">Complemento parcialidad 1 — factura XXXXXXXXXXXX saldo insoluto $0.00</strong><br>
+        Los últimos 12 chars del UUID del PPD pagado se muestran en la columna COMPLEMENTOS/OBS.
+      </div>
+    </div>
+
+    <div class="formula-alert">
+      <span>📋</span>
+      <div>
+        La forma de pago <strong>99 — Por definir</strong> en facturas PPD se clasifica como <strong>PENDIENTE</strong> (no ERROR) — este es el flujo correcto del SAT. Cuando llega el CP01 correspondiente, el PPD queda automáticamente cubierto.
       </div>
     </div>
 
@@ -943,7 +1110,7 @@
      INSTALACIÓN
 ══════════════════════════════════════════ -->
 <section class="reveal">
-  <div class="section-label">04 &nbsp; INSTALACIÓN</div>
+  <div class="section-label">07 &nbsp; INSTALACIÓN</div>
   <h2 class="section-title">Preparar<br><span style="color:var(--rosa)">el entorno</span></h2>
 
   <div class="install-grid">
@@ -991,11 +1158,11 @@
      ESTRUCTURA
 ══════════════════════════════════════════ -->
 <section class="reveal">
-  <div class="section-label">05 &nbsp; ESTRUCTURA DEL PROYECTO</div>
+  <div class="section-label">08 &nbsp; ESTRUCTURA DEL PROYECTO</div>
   <h2 class="section-title">Arquitectura<br><span style="color:var(--azul-soft)">modular</span></h2>
 
   <div class="file-tree">
-    <div><span class="ft-folder">ReaDesF1.8/</span></div>
+    <div><span class="ft-folder">ReaDesF1.9/</span></div>
     <div>&nbsp;&nbsp;│</div>
     <div>&nbsp;&nbsp;├── <span class="ft-main">main.py</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="ft-comment">← EJECUTAR ESTE</span></div>
     <div>&nbsp;&nbsp;│</div>
@@ -1006,10 +1173,11 @@
     <div>&nbsp;&nbsp;├── <span class="ft-module">motor_chunks.py</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="ft-comment">← Archivos muy grandes +30k filas</span></div>
     <div>&nbsp;&nbsp;│</div>
     <div>&nbsp;&nbsp;├── <span class="ft-module">validaciones_fiscales.py</span> <span class="ft-comment">← Reglas + fórmulas auditables</span></div>
+    <div>&nbsp;&nbsp;├── <span class="ft-module">generador_reporte.py</span> &nbsp;&nbsp;&nbsp;<span class="ft-comment">← Reporte Excel + Dashboard HTML + DIOT</span></div>
     <div>&nbsp;&nbsp;├── <span class="ft-config">seguridad.py</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="ft-comment">← Privacidad y auditoría</span></div>
     <div>&nbsp;&nbsp;│</div>
     <div>&nbsp;&nbsp;├── <span class="ft-config">requirements.txt</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="ft-comment">← pip install -r requirements.txt</span></div>
-    <div>&nbsp;&nbsp;└── <span class="ft-config">README.html</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="ft-comment">← Este archivo</span></div>
+    <div>&nbsp;&nbsp;└── <span class="ft-config">README.md</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="ft-comment">← Documentación</span></div>
   </div>
 </section>
 
@@ -1019,7 +1187,7 @@
      VERSIONES
 ══════════════════════════════════════════ -->
 <section class="reveal">
-  <div class="section-label">06 &nbsp; HISTORIAL</div>
+  <div class="section-label">09 &nbsp; HISTORIAL</div>
   <h2 class="section-title">Evolución<br><span style="color:var(--rosa)">del proyecto</span></h2>
 
   <div class="timeline">
@@ -1067,11 +1235,23 @@
     </div>
 
     <div class="timeline-item current">
-      <div class="tv-ver">v1.8 — ACTUAL</div>
+      <div class="tv-ver">v1.8</div>
       <div class="tv-title">3 Motores + Vectorización + Chunks + Fórmulas Auditables</div>
       <div class="tv-desc">
         Motor chunks para +30k filas. Masks vectorizadas (reemplaza iterrows). Columnas a category (70% menos RAM).
         Fórmulas sub1/sub0/sub2/iva_acred garantizadas en los 3 motores como fórmulas Excel vivas.
+      </div>
+    </div>
+
+    <div class="timeline-item current" style="border-color:var(--amarillo)">
+      <div class="tv-ver" style="color:var(--amarillo)">v1.9 — ACTUAL ⭐</div>
+      <div class="tv-title">Reporte + Dashboard HTML + DIOT + Fórmulas Cacheadas</div>
+      <div class="tv-desc">
+        <strong>generador_reporte.py</strong> — nuevo módulo que genera 3 archivos desde el _validado.
+        Dashboard HTML interactivo con filtros, buscador, estatus editable y localStorage.
+        DIOT automática agrupada por RFC. Cruce CP01↔PPD por RFC+total.
+        Fórmulas auditables con valor numérico cacheado en el XML — Python las lee sin depender de Excel.
+        Fix SUB0% gasolina con IEPS sin duplicar. Forma 99 PPD → PENDIENTE correcto SAT.
       </div>
     </div>
 
@@ -1084,35 +1264,39 @@
      ROADMAP
 ══════════════════════════════════════════ -->
 <section class="reveal">
-  <div class="section-label">07 &nbsp; HOJA DE RUTA</div>
+  <div class="section-label">10 &nbsp; HOJA DE RUTA</div>
   <h2 class="section-title">Lo que<br><span style="color:var(--amarillo)">viene después</span></h2>
 
   <div class="roadmap">
 
     <div class="rm-col">
-      <div class="rm-phase now">● AHORA</div>
-      <div class="rm-title" style="color:var(--amarillo)">v1.8</div>
-      <div class="rm-item"><div class="rm-dot dot-now"></div>Probar con datos reales</div>
-      <div class="rm-item"><div class="rm-dot dot-now"></div>Validar 3 motores</div>
-      <div class="rm-item"><div class="rm-dot dot-now"></div>Verificar fórmulas auditables</div>
+      <div class="rm-phase now">● COMPLETADO</div>
+      <div class="rm-title" style="color:var(--amarillo)">v1.9 ⭐</div>
+      <div class="rm-item"><div class="rm-dot dot-now"></div>Generador reporte Excel + HTML</div>
+      <div class="rm-item"><div class="rm-dot dot-now"></div>Dashboard interactivo + filtros</div>
+      <div class="rm-item"><div class="rm-dot dot-now"></div>localStorage — cambios persistentes</div>
+      <div class="rm-item"><div class="rm-dot dot-now"></div>DIOT automática en tiempo real</div>
+      <div class="rm-item"><div class="rm-dot dot-now"></div>Fórmulas cacheadas en XML</div>
+      <div class="rm-item"><div class="rm-dot dot-now"></div>Fix SUB0% gasolina IEPS</div>
+      <div class="rm-item"><div class="rm-dot dot-now"></div>Cruce CP01↔PPD por RFC+total</div>
     </div>
 
     <div class="rm-col">
       <div class="rm-phase short">● CORTO PLAZO</div>
-      <div class="rm-title" style="color:var(--rosa-soft)">v1.9</div>
+      <div class="rm-title" style="color:var(--rosa-soft)">v2.0</div>
+      <div class="rm-item"><div class="rm-dot dot-short"></div>configuracion.py externo</div>
+      <div class="rm-item"><div class="rm-dot dot-short"></div>actualizador_ppd.py entre meses</div>
       <div class="rm-item"><div class="rm-dot dot-short"></div>Interfaz gráfica tkinter</div>
-      <div class="rm-item"><div class="rm-dot dot-short"></div>config.json externo</div>
       <div class="rm-item"><div class="rm-dot dot-short"></div>Pruebas automatizadas</div>
-      <div class="rm-item"><div class="rm-dot dot-short"></div>Notificación al terminar</div>
     </div>
 
     <div class="rm-col">
       <div class="rm-phase medium">● MEDIANO PLAZO</div>
-      <div class="rm-title" style="color:var(--azul-soft)">v2.0</div>
-      <div class="rm-item"><div class="rm-dot dot-medium"></div>Reporte PDF automático</div>
-      <div class="rm-item"><div class="rm-dot dot-medium"></div>Dashboard de resultados</div>
+      <div class="rm-title" style="color:var(--azul-soft)">v2.1</div>
+      <div class="rm-item"><div class="rm-dot dot-medium"></div>comparador_meses.py</div>
+      <div class="rm-item"><div class="rm-dot dot-medium"></div>Export PDF del reporte</div>
+      <div class="rm-item"><div class="rm-dot dot-medium"></div>validador_cfdi.py — SAT</div>
       <div class="rm-item"><div class="rm-dot dot-medium"></div>Detección de patrones</div>
-      <div class="rm-item"><div class="rm-dot dot-medium"></div>Comparativo histórico</div>
     </div>
 
     <div class="rm-col">
@@ -1147,11 +1331,13 @@
     <span class="footer-tag">INSUMOS AGRÍCOLAS</span>
     <span class="footer-tag">ADAPTIVE PROCESSING</span>
     <span class="footer-tag">FÓRMULAS AUDITABLES</span>
+    <span class="footer-tag">DIOT</span>
+    <span class="footer-tag">DASHBOARD HTML</span>
   </div>
 
   <div class="footer-legal">
     Información fiscal confidencial · Procesamiento 100% local · Cumple LFPDPPP<br>
-    ReaDesF1.8 · Sinergia REA · Marzo 2026
+    ReaDesF1.9 · Sinergia REA · Marzo 2026
   </div>
 </footer>
 

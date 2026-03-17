@@ -32,6 +32,8 @@ Las FÓRMULAS AUDITABLES (sub1, sub0, sub2, iva_acred)
 se escriben como fórmulas Excel vivas en cada bloque.
 """
 
+import zipfile
+import re
 import pandas as pd
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
@@ -67,6 +69,28 @@ def _extraer_serie(s: pd.Series) -> pd.Series:
     return s2.str.split('-').str[0].str.strip().where(mask, s2).str.upper()
 
 
+def _parchear_cache_formulas(xlsx_path: str, cache: dict) -> None:
+    """Inserta valores cacheados en fórmulas del xlsx vía XML."""
+    with zipfile.ZipFile(xlsx_path, 'r') as zin:
+        contents = {n: zin.read(n) for n in zin.namelist()}
+    sheet_key = 'xl/worksheets/sheet1.xml'
+    xml = contents[sheet_key].decode('utf-8')
+    def replacer(m):
+        ref = m.group(1)
+        if ref not in cache: return m.group(0)
+        val = cache[ref]
+        sv = str(int(val)) if isinstance(val, float) and val == int(val) \
+             else f'{val:.10f}'.rstrip('0').rstrip('.')
+        return m.group(0).replace('<v></v>', f'<v>{sv}</v>')
+    xml_patched = re.sub(
+        r'<c r="([A-Z]+\d+)"[^>]*><f>[^<]*</f><v></v></c>',
+        replacer, xml)
+    contents[sheet_key] = xml_patched.encode('utf-8')
+    with zipfile.ZipFile(xlsx_path, 'w', zipfile.ZIP_DEFLATED) as zout:
+        for name, data in contents.items():
+            zout.writestr(name, data)
+
+
 def procesar_con_chunks(file_path: str, output_path: str,
                         chunk_size: int = 5000) -> dict:
     """
@@ -96,7 +120,9 @@ def procesar_con_chunks(file_path: str, output_path: str,
         return None
     def ac(n, d=None):
         c = gc(n)
-        if c is None: df_full[n] = d if d is not None else ''; return n
+        if c is None:
+            df_full[n] = d if d is not None else ''
+            return n
         return c
 
     C = {k: ac(v,'0' if k != 'concepto' else '') for k,v in {
@@ -149,13 +175,25 @@ def procesar_con_chunks(file_path: str, output_path: str,
     dc = df_full[C['descuento']]
     df_full['_sub1']     = (st - dc + i8.where(i8 > 0, 0)).round(2)
     df_full.loc[mask_ig, '_sub1'] = (st - dc)[mask_ig].round(2)
-    df_full['_sub0']     = (df_full[C['iva0']] + df_full[C['iva_ex']]).round(2)
+    # sub0: gasolina con IEPS → solo iva0 (iva_ex es el mismo valor, no duplicar)
+    df_full['_sub0'] = (df_full[C['iva0']] + df_full[C['iva_ex']]).round(2)
+    df_full.loc[mask_ig, '_sub0'] = df_full.loc[mask_ig, C['iva0']].round(2)
     df_full['_sub2']     = (df_full['_sub1'] - df_full['_sub0']).round(2)
     df_full['_iva_acred']= (df_full['_sub2'] * 0.16).round(2)
     df_full['_iva_ok']   = (df_full['_iva_acred'] - df_full[C['iva16']]).abs() < 0.01
 
     df_full['Deducible']          = df_full['_deducible']
     df_full['Razón No Deducible'] = df_full['_razon']
+
+    # ── CRÍTICO: agregar columnas de cálculo al df ANTES de to_excel() ──
+    df_full['SUB1-16%']            = df_full['_sub1']
+    df_full['SUB0%']               = df_full['_sub0']
+    df_full['SUB2-16%']            = df_full['_sub2']
+    df_full['IVA ACREDITABLE 16%'] = df_full['_iva_acred']
+    iva16_s = df_full[C['iva16']].fillna(0).astype(float)
+    df_full['C IVA']               = (df_full['_iva_acred'] - iva16_s).round(2)
+    df_full['T2']                  = (df_full['_sub2'] + df_full['_sub0'] + iva16_s).round(2)
+    df_full['Comprobación T2']     = (df_full[C['total']].fillna(0).astype(float) - df_full['T2']).round(2)
 
     # Guardar base con pandas
     cols_int  = [c for c in df_full.columns if c.startswith('_')]
@@ -212,6 +250,16 @@ def procesar_con_chunks(file_path: str, output_path: str,
     c_i8_col = fc('IEPS Trasladado 8%')
     if c_i8_col: CL['I8'] = get_column_letter(c_i8_col)
 
+    # Cache fórmulas y wf() definidos UNA VEZ fuera de todos los loops
+    _cache_formulas = {}
+
+    def wf(col, formula, num_val):
+        if col:
+            c = sheet.cell(rn, col, formula)
+            c.number_format = "0.00"
+            c.font = Font(bold=True)
+            _cache_formulas[f'{get_column_letter(col)}{rn}'] = num_val
+
     # ── PROCESAR POR BLOQUES ──────────────────────────────────────
     for n_bloque in range(bloques):
         inicio = n_bloque * chunk_size
@@ -247,19 +295,28 @@ def procesar_con_chunks(file_path: str, output_path: str,
             # ══════════════════════════════════════════════════════
             fa = formulas_auditables(rn, CL)
 
-            def wf(col, val):
-                if col:
-                    c = sheet.cell(rn, col, val)
-                    c.number_format = "0.00"
-                    c.font = Font(bold=True)
+            # sub0: gasolina con IEPS → sub0_gas (solo iva0, no duplicar iva_ex)
+            ieps_g_v  = float(row_df.get(c_ieps_g,  0) or 0) if c_ieps_g  else 0
+            ieps_nd_v = float(row_df.get(c_ieps_nd, 0) or 0) if c_ieps_nd else 0
+            f_sub0 = fa['sub0_gas'] if (es_gas_v and (ieps_g_v > 0 or ieps_nd_v > 0)) else fa['sub0']
 
-            wf(c_sub1, fa['sub1_ieps8'] if i8_v > 0 else fa['sub1'])
-            wf(c_sub0, fa['sub0'])
-            wf(c_sub2, fa['sub2'])
-            wf(c_iva_a,fa['iva_acred'])
-            wf(c_civa, fa['c_iva'])
-            wf(c_t2,   fa['t2'])
-            wf(c_comp, fa['comprob'])
+            # Valores numéricos ya calculados en el DataFrame
+            v_sub1      = float(row_df.get('_sub1',      0) or 0)
+            v_sub0      = float(row_df.get('_sub0',      0) or 0)
+            v_sub2      = float(row_df.get('_sub2',      0) or 0)
+            v_iva_acred = float(row_df.get('_iva_acred', 0) or 0)
+            iva16_v     = float(row_df.get(C['iva16'],   0) or 0)
+            v_c_iva     = round(v_iva_acred - iva16_v, 2)
+            v_t2        = round(v_sub2 + v_sub0 + iva16_v, 2)
+            v_comprob   = round(total_v - v_t2, 2)
+
+            wf(c_sub1, fa['sub1_ieps8'] if i8_v > 0 else fa['sub1'], v_sub1)
+            wf(c_sub0, f_sub0,           v_sub0)
+            wf(c_sub2, fa['sub2'],       v_sub2)
+            wf(c_iva_a, fa['iva_acred'], v_iva_acred)
+            wf(c_civa,  fa['c_iva'],     v_c_iva)
+            wf(c_t2,    fa['t2'],        v_t2)
+            wf(c_comp,  fa['comprob'],   v_comprob)
 
             # Validación IVA
             if c_i16 and c_iva_a and iva_ok_v:
@@ -271,13 +328,16 @@ def procesar_con_chunks(file_path: str, output_path: str,
             if c_rem and reg_val not in REG_FILLS: sheet.cell(rn, c_rem).fill = orange_fill
 
             if c_uso:
-                uso_raw = str(df_salida.iloc[inicio + local_idx].get('Uso CFDI',''))
+                uso_raw = str(df_full.iloc[inicio + local_idx].get('Uso CFDI',''))
                 if uso_raw.strip() == USO_CFDI_VERDE: sheet.cell(rn, c_uso).fill = green_fill
                 if uso_val == 'S01': sheet.cell(rn, c_uso).fill = red_fill
 
             if c_conc:
                 if es_dul_v and i8_v > 0:  sheet.cell(rn, c_conc).fill = pink_fill
-                elif es_gas_v:             sheet.cell(rn, c_conc).fill = orange_fill
+                elif es_gas_v:
+                    ieps_g_v  = float(row_df.get(c_ieps_g,  0) or 0) if c_ieps_g  else 0
+                    ieps_nd_v2= float(row_df.get(c_ieps_nd, 0) or 0) if c_ieps_nd else 0
+                    sheet.cell(rn, c_conc).fill = blue_fill if (ieps_g_v > 0 or ieps_nd_v2 > 0) else orange_fill
                 elif es_ins_v:
                     sheet.cell(rn, c_conc).fill = (
                         red_fill    if forma_val=='01' and total_v > LIMITE_EFECTIVO else
@@ -296,8 +356,13 @@ def procesar_con_chunks(file_path: str, output_path: str,
                 sheet.cell(rn, c_ef).fill = red_fill
 
             if c_ded:
+                es_egreso = False
+                if c_ef:
+                    ev = sheet.cell(rn, c_ef).value
+                    if ev and str(ev).strip().upper() in {'EGRESO', 'E'}:
+                        es_egreso = True
                 dc_cell          = sheet.cell(rn, c_ded, value=ded_val)
-                dc_cell.fill     = green_fill if es_ded else red_fill
+                dc_cell.fill     = (blue_fill if es_egreso else green_fill) if es_ded else red_fill
                 dc_cell.font     = bold_white
                 dc_cell.alignment= center_align
 
@@ -322,6 +387,8 @@ def procesar_con_chunks(file_path: str, output_path: str,
         if c: sheet.column_dimensions[get_column_letter(c)].width = 15
 
     wb.save(output_path)
+    print(f"  🔧 Insertando valores cacheados ({len(_cache_formulas):,} celdas)...")
+    _parchear_cache_formulas(output_path, _cache_formulas)
     print(f"  ✅ Procesamiento por chunks completado: {output_path}")
 
     # Estadísticas

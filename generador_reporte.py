@@ -117,10 +117,15 @@ def leer_validado(path):
     i_iva0      = gc('iva trasladado 0%')  or gc('iva 0%')
     i_iva_ex    = gc('iva exento')
     i_ieps      = gc('ieps trasladado') or gc('ieps')
+    i_ieps_nd   = gc('ieps trasladado no desglosado')
+    i_ieps_g    = gc('ieps trasladado')
     i_total     = gc('total')
     i_conceptos = gc('conceptos') or gc('descripcion')
     i_complem   = gc('complementos')
     i_efecto    = gc('efecto')
+    i_sub0      = gc('sub0%')    or gc('sub0')
+    i_sub2      = gc('sub2-16%') or gc('sub2')
+    i_sub1      = gc('sub1-16%') or gc('sub1')
     i_coment    = gc('comentarios') or gc('comentario') or gc('observaciones')
     i_rfc_em    = gc('rfc emisor') or gc('rfc')
 
@@ -144,8 +149,26 @@ def leer_validado(path):
         iva0   = rnum(row, i_iva0)
         iva_ex = rnum(row, i_iva_ex)
         total  = rnum(row, i_total)
-        sub0   = round(iva0 + iva_ex, 2)
-        sub2   = round(max(st - dc - sub0, 0), 2)
+        ieps_nd = rnum(row, i_ieps_nd)
+        ieps_g  = rnum(row, i_ieps_g)
+
+        # ── sub0: misma lógica que el motor, usando valores crudos ────
+        # No leer la columna SUB0% (es fórmula Excel sin caché en Python)
+        # Gasolina con IEPS: iva0 ya tiene el IEPS, iva_ex es el mismo valor
+        # → sumarlos duplicaría. Solo usar iva0.
+        ieps_activo = ieps_nd if ieps_nd > 0 else ieps_g
+        if ieps_activo > 0 and abs(iva0 - iva_ex) < 0.01 and abs(iva0 - ieps_activo) < 0.01:
+            # gasolina con IEPS — iva0 == iva_ex == ieps → no duplicar
+            sub0 = round(iva0, 2)
+        else:
+            sub0 = round(iva0 + iva_ex, 2)
+
+        # sub2: leer del _validado si está cacheado, sino recalcular
+        sub2_raw = rnum(row, i_sub2) if i_sub2 is not None else 0.0
+        if sub2_raw == 0.0 and (st - dc) > 0:
+            sub2 = round(max(st - dc - sub0, 0), 2)
+        else:
+            sub2 = round(sub2_raw, 2)
 
         uuid_rel_raw = safe_str(rv(row, i_uuid_rel))
         comentarios  = safe_str(rv(row, i_coment))
@@ -575,7 +598,7 @@ def generar_html(filas, ppd_pend, cp01_a_ppd, idx_razones, out, mes='', stats=No
 
         fc_cls = ' fc' if is_cp else ''
         buf.write(
-            '<tr class="fr %s%s" data-est="%s">'
+            '<tr class="fr %s%s" data-est="%s" data-rfc="%s">'
             '<td class="uu" title="%s">%s</td>'
             '<td class="uu" title="%s">%s</td>'
             '<td class="fd">%s</td>'
@@ -591,6 +614,7 @@ def generar_html(filas, ppd_pend, cp01_a_ppd, idx_razones, out, mes='', stats=No
             '<td class="ob">%s</td>'
             '</tr>\n' % (
                 flt, fc_cls, flt,
+                f.get('rfc_em','').strip().upper(),
                 uuid_full, uuid_disp,
                 f['uuid_rel'], rel_disp,
                 fecha_str,
@@ -604,181 +628,749 @@ def generar_html(filas, ppd_pend, cp01_a_ppd, idx_razones, out, mes='', stats=No
 
     fs = buf.getvalue(); buf.close()
 
-    html = """<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Reporte Fiscal {mes} - ReaDesF1.8</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-<style>
-:root{{--rs:#FF2D78;--am:#FFD600;--az:#0057FF;--fo:#F4F4F8;--ca:#FFF;--fa:#F7F8FC;--bo:#E0E0E8;--tx:#1A1A2E;--ts:#5A5A6E;--vr:#16A34A;--rj:#DC2626;--am2:#B8860B}}
-*{{margin:0;padding:0;box-sizing:border-box}}body{{background:var(--fo);color:var(--tx);font-family:'DM Sans',sans-serif}}
-.hd{{background:linear-gradient(135deg,#1C1C28,#222230);padding:22px 40px;border-bottom:3px solid transparent;border-image:linear-gradient(90deg,var(--rs),var(--am),var(--az)) 1}}
-.ht{{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}}
-.lg{{font-family:'Bebas Neue',sans-serif;font-size:42px;letter-spacing:3px;line-height:1}}
-.lg .r{{color:var(--rs)}}.lg .d{{color:#E0E0DC}}.lg .f{{color:var(--am)}}.lg .v{{font-size:13px;color:#3D8BFF;margin-left:6px;vertical-align:middle}}
-.hm{{font-size:12px;color:#8E8E9A;text-align:right;line-height:1.8;font-family:'JetBrains Mono',monospace}}.hm strong{{color:var(--am);font-size:13px}}
-.ps{{display:flex;gap:14px;padding:10px 40px;background:rgba(22,163,74,0.04);border-bottom:1px solid var(--bo);align-items:center;flex-wrap:wrap}}
-.pl{{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ts);letter-spacing:2px}}
-.pv{{background:rgba(22,163,74,0.1);color:var(--vr);padding:4px 13px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;border:1px solid rgba(22,163,74,0.2)}}
-.cs{{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;padding:22px 40px}}
-.cd{{background:var(--ca);border-radius:10px;padding:16px 18px;border-left:4px solid transparent;box-shadow:0 2px 10px rgba(0,0,0,0.07)}}
-.cd1{{border-color:var(--vr)}}.cd2{{border-color:var(--rj)}}.cd3{{border-color:#999}}.cd4{{border-color:var(--am)}}.cd5{{border-color:#E68A00}}
-.cl{{font-size:9px;color:var(--ts);letter-spacing:1.5px;text-transform:uppercase;font-family:'JetBrains Mono',monospace}}
-.cn{{font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--tx);margin:4px 0}}.cm{{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--am2)}}
-.leyenda{{display:flex;gap:8px;padding:10px 40px 14px;flex-wrap:wrap;align-items:center}}
-.ley-tit{{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ts);letter-spacing:2px}}
-.ley-item{{display:flex;align-items:center;gap:5px;font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--ts)}}
-.ley-dot{{width:14px;height:14px;border-radius:3px;border:1px solid rgba(0,0,0,0.15)}}
-.fls{{padding:0 40px 14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}}
-.fll{{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ts);letter-spacing:2px}}
-.bf{{padding:7px 15px;border:1px solid var(--bo);border-radius:5px;background:transparent;color:var(--ts);font-size:11px;font-family:'JetBrains Mono',monospace;cursor:pointer;transition:all .2s;white-space:nowrap}}
-.bf:hover{{border-color:var(--rs);color:var(--rs)}}.bf.ac{{background:var(--rs);border-color:var(--rs);color:#fff}}
-.bdd.ac{{background:var(--vr);border-color:var(--vr);color:#fff}}.bno.ac{{background:var(--rj);border-color:var(--rj);color:#fff}}
-.bpp.ac{{background:#666;border-color:#666;color:#fff}}.bef.ac{{background:#E68A00;border-color:#E68A00;color:#fff}}
-.beg.ac{{background:#7B1FA2;border-color:#7B1FA2;color:#fff}}.bcp.ac{{background:#4A0080;border-color:#4A0080;color:#fff}}
-.bw{{padding:0 40px 16px}}
-.bq{{width:100%;max-width:480px;padding:10px 16px;background:#FFF;border:1px solid #D0D0D8;border-radius:6px;color:var(--tx);font-size:13px;outline:none}}
-.bq:focus{{border-color:var(--rs);box-shadow:0 0 0 3px rgba(255,45,120,0.08)}}
-.tw{{padding:0 40px 40px}}
-table.dataTable{{font-size:12px}}
-table.dataTable thead th{{background:linear-gradient(180deg,#24242E,#1C1C26)!important;color:var(--am)!important;padding:11px 8px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.8px;border-bottom:2px solid var(--rs)!important;white-space:nowrap}}
-table.dataTable tbody td{{padding:9px 8px;border-bottom:1px solid var(--bo);vertical-align:middle}}
-table.dataTable tbody tr:nth-child(even){{background:var(--fa)}}table.dataTable tbody tr:hover{{background:rgba(255,45,120,0.04)!important}}
-.uu{{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ts);word-break:break-all}}
-.fd{{font-size:11px;color:var(--ts);white-space:nowrap;text-align:center}}
-.rz{{font-size:11px}}
-.nm{{text-align:right}}.tt{{font-weight:700;color:var(--am2);text-align:right;font-family:'JetBrains Mono',monospace;white-space:nowrap}}
-.mt{{font-size:10px;color:var(--ts);max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
-.ec{{text-align:center}}.ob{{font-size:10px;max-width:320px}}
-.ip{{background:transparent;border:1px solid transparent;color:var(--tx);font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;text-align:right;width:90px;padding:4px 5px;border-radius:4px}}
-.ip:hover{{border-color:#ccc}}.ip:focus{{border-color:#3D8BFF;background:rgba(0,87,255,0.04);outline:none}}
-.se{{padding:6px 10px;border-radius:5px;font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:700;border:none;cursor:pointer;min-width:155px}}
-.se.ded16{{background:#C6EFCE;color:#1B5E20}}.se.ded0{{background:#FFF3CD;color:#856404}}
-.se.mix{{background:#BDD7EE;color:#1F497D}}.se.egreso{{background:#E2CFED;color:#6A1B9A}}
-.se.pendiente{{background:#E0E0E0;color:#37474F}}.se.complemento{{background:#D5C6E0;color:#4A0080}}
-.se.no-ded{{background:#FFC7CE;color:#9C0006}}.se.changed{{box-shadow:0 0 0 2px var(--am)}}
-.cb{{display:inline-block;padding:3px 8px;border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;background:rgba(74,0,128,0.08);color:#7B1FA2;border:1px solid rgba(74,0,128,0.15);cursor:text}}
-.pb{{display:inline-block;padding:3px 8px;border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;background:rgba(255,214,0,0.08);color:var(--am2);border:1px solid rgba(255,214,0,0.2);cursor:text}}
-.ob-txt{{font-size:10px;color:var(--ts);cursor:text}}
-[contenteditable]:focus{{outline:1px dashed #3D8BFF;border-radius:2px;padding:2px}}
-.fc,.fc:nth-child(even){{background:rgba(213,198,224,0.15)!important}}.oculto{{display:none!important}}
-.dataTables_wrapper .dataTables_filter input{{border:1px solid var(--bo);border-radius:5px;padding:6px 12px;font-size:13px;outline:none}}
-.dataTables_wrapper .dataTables_filter input:focus{{border-color:var(--rs)}}
-.dataTables_wrapper .dataTables_length select{{border:1px solid var(--bo);border-radius:4px;padding:4px 8px}}
-.dataTables_info,.dataTables_paginate{{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ts);margin-top:12px}}
-.paginate_button{{padding:4px 10px!important;border:1px solid var(--bo)!important;border-radius:4px!important;margin:0 2px!important}}
-.paginate_button.current{{background:var(--rs)!important;color:#fff!important;border-color:var(--rs)!important}}
-footer{{padding:28px 40px;border-top:1px solid var(--bo);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;background:linear-gradient(180deg,#1C1C28,#12121A)}}
-.fl2{{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:4px;color:#E0E0DC}}.fl2 .r{{color:var(--rs)}}.fl2 .f{{color:var(--am)}}
-.fi{{font-family:'JetBrains Mono',monospace;font-size:10px;color:#8E8E9A;text-align:right;line-height:1.9;opacity:.65}}
-</style>
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
-</head><body>
-<div class="hd"><div class="ht">
-  <div class="lg"><span class="r">Rea</span><span class="d">Des</span><span class="f">F</span><span class="v">1.8</span></div>
-  <div class="hm"><strong>REPORTE FISCAL - REGIMEN {reg_cod}</strong><br>{reg_nombre} . {mes}<br>Generado: {now}</div>
-</div></div>
-<div class="ps"><span class="pl">PUNTOS DEDUCIBLES:</span><span class="pv">PUE</span><span class="pv">01, 02, 03, 28</span><span class="pv">G01 Y G03</span></div>
-<div class="cs">
-  <div class="cd cd1"><div class="cl">DEDUCIBLES</div><div class="cn">{nd}</div><div class="cm">${md}</div></div>
-  <div class="cd cd5"><div class="cl">EFECTIVO</div><div class="cn">{ne}</div></div>
-  <div class="cd cd2"><div class="cl">NO DEDUCIBLES</div><div class="cn">{nn}</div><div class="cm">${mn}</div></div>
-  <div class="cd cd3"><div class="cl">PENDIENTES</div><div class="cn">{np}</div><div class="cm">${mp}</div></div>
-  <div class="cd cd4"><div class="cl">TOTAL FACTURAS</div><div class="cn">{tf}</div></div>
-</div>
-<div class="leyenda"><span class="ley-tit">COLORES:</span>
-  <span class="ley-item"><span class="ley-dot" style="background:#C6EFCE"></span>DED/EFE 16%</span>
-  <span class="ley-item"><span class="ley-dot" style="background:#BDD7EE"></span>16 Y 0%</span>
-  <span class="ley-item"><span class="ley-dot" style="background:#FFF3CD"></span>0%</span>
-  <span class="ley-item"><span class="ley-dot" style="background:#E2CFED"></span>EGRESO</span>
-  <span class="ley-item"><span class="ley-dot" style="background:#D5C6E0"></span>COMPLEMENTO</span>
-  <span class="ley-item"><span class="ley-dot" style="background:#E0E0E0"></span>PENDIENTE</span>
-  <span class="ley-item"><span class="ley-dot" style="background:#FFC7CE"></span>NO DEDUCIBLE</span>
-</div>
-<div class="fls"><span class="fll">FILTRAR:</span>
-  <button class="bf ac"  onclick="ft('todos',this)">TODOS ({tf})</button>
-  <button class="bf bdd" onclick="ft('ded',this)">DED ({ndd})</button>
-  <button class="bf bef" onclick="ft('efe',this)">EFE ({ne})</button>
-  <button class="bf bno" onclick="ft('no-ded',this)">NO DED ({nn})</button>
-  <button class="bf bpp" onclick="ft('pendiente',this)">PEND ({np})</button>
-  <button class="bf beg" onclick="ft('egreso',this)">EGRESO ({neg})</button>
-  <button class="bf bcp" onclick="ft('complemento',this)">CP01 ({nc})</button>
-</div>
-<div class="tw"><table id="tbl" class="display" style="width:100%">
-  <thead><tr><th>FOLIO FISCAL</th><th>UUID REL.</th><th>FECHA</th><th>RAZON SOCIAL</th>
-    <th>SUBTOTAL 16%</th><th>IVA 16%</th><th>SUB 0%</th><th>TOTAL</th>
-    <th>METODO</th><th>FORMA PAGO</th><th>USO CFDI</th><th>ESTATUS</th><th>COMPLEMENTOS / OBS</th>
-  </tr></thead>
-  <tbody>{fs}</tbody>
-</table></div>
-<footer>
-  <div class="fl2"><span class="r">Rea</span>Des<span class="f">F</span></div>
-  <div class="fi">Sinergia REA . ReaDesF1.8 . Mexico 2026<br>Regimen {reg_cod} . {reg_nombre}<br>{nd2} deducibles . {nn} no deducibles . {np} pendientes</div>
-</footer>
-<script>
-let fa='todos', dtable;
-$(document).ready(function(){{
-  dtable=$('#tbl').DataTable({{
-    pageLength:100, lengthMenu:[50,100,200,500],
-    scrollX:true, autoWidth:true,
-    order:[[2,'asc']],
-    language:{{search:'Buscar:',lengthMenu:'Mostrar _MENU_',info:'_START_ a _END_ de _TOTAL_',paginate:{{previous:'Ant',next:'Sig'}},zeroRecords:'Sin resultados'}},
-    columnDefs:[
-      {{targets:[0,1],width:'160px'}},
-      {{targets:[2],width:'100px'}},
-      {{targets:[3],width:'160px'}},
-      {{targets:[4,5,6],width:'80px'}},
-      {{targets:[7],width:'90px'}},
-      {{targets:[8,9,10],width:'140px'}},
-      {{targets:[11],width:'140px'}},
-      {{targets:[12],width:'220px'}}
+    # ── CSS ─────────────────────────────────────────────────────────
+    _CSS = """
+/* ── Variables de color ───────────────────────────────────────── */
+:root {
+  --rs: #FF2D78; --am: #FFD600; --az: #0057FF;
+  --fo: #F4F4F8; --ca: #FFF;    --fa: #F7F8FC; --bo: #E0E0E8;
+  --tx: #1A1A2E; --ts: #5A5A6E;
+  --vr: #16A34A; --rj: #DC2626; --am2: #B8860B;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--fo); color:var(--tx); font-family:'DM Sans',sans-serif; }
+
+/* ── Header ───────────────────────────────────────────────────── */
+.hd { background:linear-gradient(135deg,#1C1C28,#222230); padding:22px 40px;
+      border-bottom:3px solid transparent;
+      border-image:linear-gradient(90deg,var(--rs),var(--am),var(--az)) 1; }
+.ht { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; }
+.lg { font-family:'Bebas Neue',sans-serif; font-size:42px; letter-spacing:3px; line-height:1; }
+.lg .r { color:var(--rs); } .lg .d { color:#E0E0DC; } .lg .f { color:var(--am); }
+.lg .v { font-size:13px; color:#3D8BFF; margin-left:6px; vertical-align:middle; }
+.hm { font-size:12px; color:#8E8E9A; text-align:right; line-height:1.8;
+      font-family:'JetBrains Mono',monospace; }
+.hm strong { color:var(--am); font-size:13px; }
+
+/* ── Puntos deducibles ────────────────────────────────────────── */
+.ps { display:flex; gap:14px; padding:10px 40px;
+      background:rgba(22,163,74,0.04); border-bottom:1px solid var(--bo);
+      align-items:center; flex-wrap:wrap; }
+.pl { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--ts); letter-spacing:2px; }
+.pv { background:rgba(22,163,74,0.1); color:var(--vr); padding:4px 13px;
+      border-radius:4px; font-family:'JetBrains Mono',monospace; font-size:11px;
+      font-weight:700; border:1px solid rgba(22,163,74,0.2); }
+
+/* ── Tarjetas de resumen ──────────────────────────────────────── */
+.cs { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+      gap:14px; padding:22px 40px; }
+.cd { background:var(--ca); border-radius:10px; padding:16px 18px;
+      border-left:4px solid transparent; box-shadow:0 2px 10px rgba(0,0,0,0.07); }
+.cd1 { border-color:var(--vr); }  .cd2 { border-color:var(--rj); }
+.cd3 { border-color:#999; }       .cd4 { border-color:var(--am); }
+.cd5 { border-color:#E68A00; }
+.cd-click { cursor:pointer; transition:all .2s; }
+.cd-click:hover { box-shadow:0 4px 18px rgba(22,163,74,0.18);
+                  border-left-width:6px; transform:translateY(-2px); }
+.cd-click.diot-open { border-left-color:var(--am);
+                      box-shadow:0 4px 18px rgba(184,134,11,0.25); }
+.diot-ico { font-size:8px; color:var(--am); letter-spacing:1px;
+            font-family:'JetBrains Mono',monospace; margin-left:4px;
+            opacity:.7; }
+.cl { font-size:9px; color:var(--ts); letter-spacing:1.5px; text-transform:uppercase;
+      font-family:'JetBrains Mono',monospace; }
+.cn { font-family:'Bebas Neue',sans-serif; font-size:36px; color:var(--tx); margin:4px 0; }
+.cm { font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--am2); }
+
+/* ── Leyenda de colores ───────────────────────────────────────── */
+.leyenda { display:flex; gap:8px; padding:10px 40px 14px; flex-wrap:wrap; align-items:center; }
+.ley-tit { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--ts); letter-spacing:2px; }
+.ley-item { display:flex; align-items:center; gap:5px; font-size:10px;
+            font-family:'JetBrains Mono',monospace; color:var(--ts); }
+.ley-dot { width:14px; height:14px; border-radius:3px; border:1px solid rgba(0,0,0,0.15); }
+
+/* ── Botones de filtro ────────────────────────────────────────── */
+.fls { padding:0 40px 14px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.fll { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--ts); letter-spacing:2px; }
+.bf  { padding:7px 15px; border:1px solid var(--bo); border-radius:5px;
+       background:transparent; color:var(--ts); font-size:11px;
+       font-family:'JetBrains Mono',monospace; cursor:pointer; transition:all .2s; white-space:nowrap; }
+.bf:hover { border-color:var(--rs); color:var(--rs); }
+.bf.ac    { background:var(--rs); border-color:var(--rs); color:#fff; }
+.bdd.ac   { background:var(--vr);  border-color:var(--vr);  color:#fff; }
+.bno.ac   { background:var(--rj);  border-color:var(--rj);  color:#fff; }
+.bpp.ac   { background:#666;       border-color:#666;        color:#fff; }
+.bef.ac   { background:#E68A00;    border-color:#E68A00;     color:#fff; }
+.beg.ac   { background:#7B1FA2;    border-color:#7B1FA2;     color:#fff; }
+.bcp.ac   { background:#4A0080;    border-color:#4A0080;     color:#fff; }
+.breset   { border-color:#999; color:#999; margin-left:8px; }
+.breset:hover { border-color:var(--rj); color:var(--rj); }
+
+/* ── Buscador personalizado ───────────────────────────────────── */
+.bw { padding:0 40px 16px; }
+.bq { width:100%; max-width:480px; padding:10px 16px; background:#FFF;
+      border:1px solid #D0D0D8; border-radius:6px; color:var(--tx); font-size:13px; outline:none; }
+.bq:focus { border-color:var(--rs); box-shadow:0 0 0 3px rgba(255,45,120,0.08); }
+
+/* ── Tabla ────────────────────────────────────────────────────── */
+.tw { padding:0 40px 40px; }
+table.dataTable { font-size:12px; }
+table.dataTable thead th {
+  background:linear-gradient(180deg,#24242E,#1C1C26) !important;
+  color:var(--am) !important; padding:11px 8px; text-align:center;
+  font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.8px;
+  border-bottom:2px solid var(--rs) !important; white-space:nowrap;
+}
+table.dataTable tbody td { padding:9px 8px; border-bottom:1px solid var(--bo); vertical-align:middle; }
+table.dataTable tbody tr:nth-child(even) { background:var(--fa); }
+table.dataTable tbody tr:hover { background:rgba(255,45,120,0.04) !important; }
+
+/* ── Celdas específicas ───────────────────────────────────────── */
+.uu  { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--ts); word-break:break-all; }
+.fd  { font-size:11px; color:var(--ts); white-space:nowrap; text-align:center; }
+.rz  { font-size:11px; }
+.nm  { text-align:right; }
+.tt  { font-weight:700; color:var(--am2); text-align:right;
+       font-family:'JetBrains Mono',monospace; white-space:nowrap; }
+.mt  { font-size:10px; color:var(--ts); max-width:150px;
+       white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ec  { text-align:center; }
+.ob  { font-size:10px; max-width:320px; }
+
+/* ── Input editable de montos ─────────────────────────────────── */
+.ip { background:transparent; border:1px solid transparent; color:var(--tx);
+      font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700;
+      text-align:right; width:90px; padding:4px 5px; border-radius:4px; }
+.ip:hover { border-color:#ccc; }
+.ip:focus { border-color:#3D8BFF; background:rgba(0,87,255,0.04); outline:none; }
+
+/* ── Select de estatus ────────────────────────────────────────── */
+.se           { padding:6px 10px; border-radius:5px; font-size:10px;
+                font-family:'JetBrains Mono',monospace; font-weight:700;
+                border:none; cursor:pointer; min-width:155px; }
+.se.ded16     { background:#C6EFCE; color:#1B5E20; }
+.se.ded0      { background:#FFF3CD; color:#856404; }
+.se.mix       { background:#BDD7EE; color:#1F497D; }
+.se.egreso    { background:#E2CFED; color:#6A1B9A; }
+.se.pendiente { background:#E0E0E0; color:#37474F; }
+.se.complemento { background:#D5C6E0; color:#4A0080; }
+.se.no-ded    { background:#FFC7CE; color:#9C0006; }
+.se.changed   { box-shadow:0 0 0 2px var(--am); }
+
+/* ── Etiquetas OBS ────────────────────────────────────────────── */
+.cb { display:inline-block; padding:3px 8px; border-radius:3px;
+      font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700;
+      background:rgba(74,0,128,0.08); color:#7B1FA2;
+      border:1px solid rgba(74,0,128,0.15); cursor:text; }
+.pb { display:inline-block; padding:3px 8px; border-radius:3px;
+      font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700;
+      background:rgba(255,214,0,0.08); color:var(--am2);
+      border:1px solid rgba(255,214,0,0.2); cursor:text; }
+.ob-txt { font-size:10px; color:var(--ts); cursor:text; }
+[contenteditable]:focus { outline:1px dashed #3D8BFF; border-radius:2px; padding:2px; }
+
+/* ── Filas complemento / oculto ──────────────────────────────── */
+.fc, .fc:nth-child(even) { background:rgba(213,198,224,0.15) !important; }
+.oculto { display:none !important; }
+
+/* ── Controles DataTables ─────────────────────────────────────── */
+.dataTables_wrapper .dataTables_filter { display:none !important; }
+.dataTables_wrapper .dataTables_length select {
+  border:1px solid var(--bo); border-radius:4px; padding:4px 8px; }
+.dataTables_info, .dataTables_paginate {
+  font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ts); margin-top:12px; }
+.paginate_button {
+  padding:4px 10px !important; border:1px solid var(--bo) !important;
+  border-radius:4px !important; margin:0 2px !important; }
+.paginate_button.current {
+  background:var(--rs) !important; color:#fff !important; border-color:var(--rs) !important; }
+
+
+/* ── DIOT ─────────────────────────────────────────────────────── */
+.diot-wrap { padding:0 40px 30px; }
+.diot-hdr  { display:flex; align-items:center; gap:12px;
+             background:linear-gradient(135deg,#2C2C1E,#3A3A28);
+             padding:14px 24px; border-radius:8px 8px 0 0;
+             border-left:4px solid var(--am); }
+.diot-dash  { color:var(--am); font-size:20px; font-weight:700; }
+.diot-title { font-family:'Bebas Neue',sans-serif; font-size:20px;
+              letter-spacing:2px; color:var(--am); }
+.diot-mes   { font-family:'JetBrains Mono',monospace; font-size:11px;
+              color:#8E8E6A; margin-left:auto; }
+.diot-tw    { overflow-x:auto; border-radius:0 0 8px 8px;
+              box-shadow:0 4px 16px rgba(0,0,0,0.10); }
+.diot-tbl   { width:100%; border-collapse:collapse; font-size:12px; }
+.diot-tbl thead th {
+  background:linear-gradient(180deg,#24242E,#1C1C26);
+  color:var(--am); padding:10px 14px; text-align:center;
+  font-family:'JetBrains Mono',monospace; font-size:10px;
+  letter-spacing:0.8px; border-bottom:2px solid var(--am);
+  white-space:nowrap;
+}
+.diot-tbl thead th:first-child,
+.diot-tbl thead th:nth-child(2) { text-align:left; }
+.diot-row   { background:#FAFAF5; }
+.diot-alt   { background:#F3F3EC; }
+.diot-row:hover, .diot-alt:hover { background:rgba(184,134,11,0.06) !important; }
+.diot-rs    { padding:9px 14px; font-size:11px; font-weight:500; color:var(--tx); }
+.diot-rfc   { padding:9px 14px; font-family:'JetBrains Mono',monospace;
+              font-size:10px; color:var(--ts); }
+.diot-num   { padding:9px 14px; text-align:right;
+              font-family:'JetBrains Mono',monospace; font-size:11px;
+              color:var(--tx); border-left:1px solid var(--bo); }
+.diot-tot   { padding:9px 14px; text-align:right;
+              font-family:'JetBrains Mono',monospace; font-size:11px;
+              font-weight:700; color:var(--am2);
+              border-left:1px solid var(--bo); }
+.diot-totrow { background:linear-gradient(135deg,#1C1C28,#222230); }
+.diot-totrow td { border-top:2px solid var(--am); }
+.diot-tl    { padding:10px 14px; font-family:'JetBrains Mono',monospace;
+              font-size:11px; font-weight:700; color:var(--am);
+              letter-spacing:2px; }
+
+/* ── Footer ───────────────────────────────────────────────────── */
+footer { padding:28px 40px; border-top:1px solid var(--bo);
+         display:flex; justify-content:space-between; align-items:center;
+         flex-wrap:wrap; gap:16px; background:linear-gradient(180deg,#1C1C28,#12121A); }
+.fl2     { font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:4px; color:#E0E0DC; }
+.fl2 .r  { color:var(--rs); }
+.fl2 .f  { color:var(--am); }
+.fi      { font-family:'JetBrains Mono',monospace; font-size:10px; color:#8E8E9A;
+           text-align:right; line-height:1.9; opacity:.65; }
+"""
+
+    # ── JavaScript ──────────────────────────────────────────────────
+    _JS = r"""
+/* ── Estado global ────────────────────────────────────────────── */
+let fa = 'todos';
+let dtable;
+
+// Clave única por reporte (basada en el título)
+const STORE_KEY = 'reaf_cambios_' + document.title.replace(/\s+/g,'_');
+
+/* ── Filtro por deducibilidad (data-est del <tr>) ─────────────── */
+$.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+  if (fa === 'todos') return true;
+  const row = dtable.row(dataIndex).node();
+  const est = (row ? row.getAttribute('data-est') : '') || '';
+  if (fa === 'ded')         return est === 'ded' && !est.includes('efe');
+  if (fa === 'efe')         return est === 'efe';
+  if (fa === 'no-ded')      return est === 'no-ded';
+  if (fa === 'pendiente')   return est === 'pendiente';
+  if (fa === 'egreso')      return est === 'egreso';
+  if (fa === 'complemento') return est === 'complemento';
+  return true;
+});
+
+/* ── localStorage: guardar / borrar / leer cambios ───────────── */
+function guardarCambio(uuid, estatus) {
+  try {
+    const d = JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
+    d[uuid] = estatus;
+    localStorage.setItem(STORE_KEY, JSON.stringify(d));
+  } catch(e) { console.warn('localStorage no disponible', e); }
+}
+function borrarCambio(uuid) {
+  try {
+    const d = JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
+    delete d[uuid];
+    localStorage.setItem(STORE_KEY, JSON.stringify(d));
+  } catch(e) {}
+}
+function getCambios() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); }
+  catch(e) { return {}; }
+}
+
+/* ── restaurarCambios(): aplica localStorage al cargar ──────────
+   FIX: itera sobre TODAS las filas con dtable.rows().nodes()
+        (dtable.rows().every() no ve filas en páginas no visibles)
+        Al terminar llama actualizarDiot() para que la DIOT refleje
+        los estatus restaurados desde el primer momento.
+   ─────────────────────────────────────────────────────────────── */
+function restaurarCambios() {
+  const cambios = getCambios();
+  if (!Object.keys(cambios).length) return;
+  $(dtable.rows().nodes()).each(function() {
+    const tr   = this;
+    const uuid = (tr.cells[0] ? tr.cells[0].getAttribute('title') || '' : '').trim().toUpperCase();
+    if (!uuid) return;
+    const nuevoEst = cambios[uuid];
+    if (!nuevoEst) return;
+    const sel = tr.querySelector('.se');
+    if (!sel) return;
+    sel.value = nuevoEst;
+    ce(sel, false);  // false = no volver a guardar en localStorage
+  });
+  dtable.draw(false);    // redibujar sin resetear paginación
+  actualizarDiot();      // FIX: recalcular DIOT con los estatus restaurados
+}
+
+/* ── exportarCambiosCSV(): descarga cambios manuales como CSV ───
+   Útil para auditoría o para restaurar si el HTML se regenera.
+   ─────────────────────────────────────────────────────────────── */
+function exportarCambiosCSV() {
+  const cambios = getCambios();
+  const keys = Object.keys(cambios);
+  if (!keys.length) { alert('No hay cambios guardados.'); return; }
+  let csv = 'UUID,ESTATUS_MANUAL\n';
+  keys.forEach(uuid => { csv += uuid + ',' + cambios[uuid] + '\n'; });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = 'cambios_diot_' + STORE_KEY.slice(-8) + '.csv';
+  a.click(); URL.revokeObjectURL(url);
+}
+
+/* ── actualizarDiot(): recalcula DIOT con estatus actuales ──────
+   FIX: usa dtable.rows().nodes() en lugar de $('#tbl tbody tr')
+        para incluir filas de TODAS las páginas, no solo la visible.
+   ─────────────────────────────────────────────────────────────── */
+function actualizarDiot() {
+  const sec = document.getElementById('diot-section');
+  if (!sec || sec.style.display === 'none') return;
+
+  const provs = {};
+  $(dtable.rows().nodes()).each(function() {
+    const est = this.getAttribute('data-est') || '';
+    if (est !== 'ded' && est !== 'efe') return;
+    const cells = this.cells;
+    const razon = cells[3] ? cells[3].innerText.trim() : '';
+    const rfc   = this.getAttribute('data-rfc') || '';
+    if (!rfc) return;
+    const s2  = parseFloat((cells[4]?.querySelector('input')?.value) || 0) || 0;
+    const i16 = parseFloat((cells[5]?.querySelector('input')?.value) || 0) || 0;
+    const s0  = parseFloat((cells[6]?.querySelector('input')?.value) || 0) || 0;
+    const tot = parseFloat(((cells[7]?.innerText || '0').replace(/[^0-9.]/g,''))) || 0;
+    if (!provs[rfc]) provs[rfc] = { razon, rfc, s2:0, i16:0, s0:0, tot:0 };
+    provs[rfc].s2  += s2;  provs[rfc].i16 += i16;
+    provs[rfc].s0  += s0;  provs[rfc].tot += tot;
+  });
+
+  const lista = Object.values(provs).sort((a,b) => a.razon.localeCompare(b.razon));
+  const fmt   = v => v > 0 ? '$' + v.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',') : '-';
+  let tS2=0, tI16=0, tS0=0, tTot=0;
+  lista.forEach(p => { tS2+=p.s2; tI16+=p.i16; tS0+=p.s0; tTot+=p.tot; });
+
+  let rows = lista.map((p,i) =>
+    `<tr class="diot-row${i%2===0?' diot-alt':''}">
+      <td class="diot-rs">${p.razon}</td><td class="diot-rfc">${p.rfc}</td>
+      <td class="diot-num">${fmt(p.s2)}</td><td class="diot-num">${fmt(p.i16)}</td>
+      <td class="diot-num">${fmt(p.s0)}</td><td class="diot-tot">${fmt(p.tot)}</td>
+    </tr>`
+  ).join('');
+  rows += `<tr class="diot-totrow">
+    <td colspan="2" class="diot-tl">TOTALES</td>
+    <td class="diot-tot">${fmt(tS2)}</td><td class="diot-tot">${fmt(tI16)}</td>
+    <td class="diot-tot">${fmt(tS0)}</td><td class="diot-tot">${fmt(tTot)}</td>
+  </tr>`;
+  const tbody = sec.querySelector('.diot-tbl tbody');
+  if (tbody) tbody.innerHTML = rows;
+}
+
+/* ── Filtro por deducibilidad (data-est del <tr>) ─────────────── */
+$.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+  if (fa === 'todos') return true;
+  const row = dtable.row(dataIndex).node();
+  const est = (row ? row.getAttribute('data-est') : '') || '';
+  if (fa === 'ded')         return est === 'ded';
+  if (fa === 'efe')         return est === 'efe';
+  if (fa === 'no-ded')      return est === 'no-ded';
+  if (fa === 'pendiente')   return est === 'pendiente';
+  if (fa === 'egreso')      return est === 'egreso';
+  if (fa === 'complemento') return est === 'complemento';
+  return true;
+});
+
+/* ── Inicialización DataTable ─────────────────────────────────── */
+$(document).ready(function() {
+  dtable = $('#tbl').DataTable({
+    pageLength : 100,
+    lengthMenu : [25, 50, 100, 200, 500],
+    deferRender: true,
+    scrollX    : true,
+    autoWidth  : true,
+    order      : [[2, 'asc']],
+    language   : {
+      search     : 'Buscar:',
+      lengthMenu : 'Mostrar _MENU_',
+      info       : '_START_ a _END_ de _TOTAL_',
+      paginate   : { previous: 'Ant', next: 'Sig' },
+      zeroRecords: 'Sin resultados'
+    },
+    columnDefs: [
+      { targets: [0, 1],     width: '160px' },
+      { targets: [2],        width: '100px' },
+      { targets: [3],        width: '160px' },
+      { targets: [4, 5, 6],  width: '80px'  },
+      { targets: [7],        width: '90px'  },
+      { targets: [8, 9, 10], width: '140px' },
+      { targets: [11],       width: '140px' },
+      { targets: [12],       width: '220px' }
     ]
-  }});
-}});
-function ft(t,btn){{fa=t;document.querySelectorAll('.fls .bf').forEach(b=>b.classList.remove('ac'));if(btn)btn.classList.add('ac');
-  if(t==='todos'){{dtable.search('').draw()}}
-  else{{dtable.search(t==='ded'?'DED':t==='efe'?'EFE':t==='no-ded'?'NO DED':t==='pendiente'?'PENDIENTE':t==='egreso'?'EGRESO':t==='complemento'?'COMPLEMENTO':'').draw()}}
-}}
-function ce(sel){{const v=sel.value,o=sel.dataset.original;sel.className='se';
-  if(v.includes('COMPLE'))sel.classList.add('complemento');
-  else if(v.includes('PEND'))sel.classList.add('pendiente');
-  else if(v.includes('NO DED')||v.includes('ERROR'))sel.classList.add('no-ded');
-  else if(v.includes('EGRESO'))sel.classList.add('egreso');
-  else if(v.includes('16 Y 0'))sel.classList.add('mix');
-  else if(v.includes('0%')&&!v.includes('16'))sel.classList.add('ded0');
-  else if(v.includes('16%'))sel.classList.add('ded16');
-  else sel.classList.add('no-ded');
-  if(v!==o)sel.classList.add('changed');else sel.classList.remove('changed');
-}}
-function rc(inp){{const tr=inp.closest('tr');if(!tr)return;const ins=tr.querySelectorAll('.ip');if(ins.length<3)return;
-  const s2=parseFloat(ins[0].value)||0,i16=parseFloat(ins[1].value)||0,s0=parseFloat(ins[2].value)||0;
-  const sel=tr.querySelector('.se');if(!sel)return;
-  const forma=(tr.cells[9]?.innerText||'').trim(),uso=(tr.cells[10]?.innerText||'').trim(),met=(tr.cells[8]?.innerText||'').trim();
-  const tot=parseFloat((tr.cells[7]?.innerText||'0').replace(/[^0-9.]/g,''))||0;
-  const fp=forma.substring(0,2),uc=uso.substring(0,3).toUpperCase(),mc=met.substring(0,3).toUpperCase();
-  if(uc==='S01'){{sel.value='NO DEDUCIBLE';ce(sel);return}}
-  if(!['G01','G02','G03'].includes(uc)||!['PUE','PPD'].includes(mc)||!['01','02','03','04','28'].includes(fp))return;
-  if(fp==='01'&&tot>=2000){{sel.value='NO DEDUCIBLE: Efectivo >= $2,000';ce(sel);return}}
-  if(uc==='G02'){{sel.value='EGRESO';ce(sel);return}}
-  let suf='NO DEDUCIBLE';
-  if(s2>0&&i16>0&&s0===0)suf='16%';else if(s2>0&&i16>0&&s0>0)suf='16 Y 0%';else if(s2===0&&i16===0&&s0>0)suf='0%';
-  sel.value=(fp==='01'?'EFE ':'DED ')+suf;ce(sel);
-}}
-</script></body></html>""".format(
+  });
+
+  $('#bq-custom').on('keyup', function() { dtable.search(this.value).draw(); });
+
+  restaurarCambios();
+  actualizarContadores();
+});
+
+/* ── toggleDiot(): mostrar/ocultar DIOT ──────────────────────── */
+function toggleDiot(card) {
+  const sec = document.getElementById('diot-section');
+  if (!sec) return;
+  const visible = sec.style.display !== 'none';
+  sec.style.display = visible ? 'none' : 'block';
+  card.classList.toggle('diot-open', !visible);
+  if (!visible) actualizarDiot();
+}
+
+/* ── actualizarContadores(): recuenta data-est en TODAS las filas */
+function actualizarContadores() {
+  let ded=0, efe=0, nod=0, pen=0, eg=0, cp=0, tot=0;
+  let mDed=0, mNod=0, mPen=0;
+  $(dtable.rows().nodes()).each(function() {
+    const est  = this.getAttribute('data-est') || '';
+    const tots = parseFloat(
+      ($(this).find('td:eq(7)').text() || '0').replace(/[^0-9.]/g,'')
+    ) || 0;
+    tot++;
+    if      (est==='ded')         { ded++; mDed+=tots; }
+    else if (est==='efe')         { efe++; mDed+=tots; }
+    else if (est==='no-ded')      { nod++; mNod+=tots; }
+    else if (est==='pendiente')   { pen++; mPen+=tots; }
+    else if (est==='egreso')      { eg++;  }
+    else if (est==='complemento') { cp++;  }
+  });
+  const bf = document.querySelectorAll('.fls .bf');
+  if (bf[0]) bf[0].textContent = 'TODOS (' +tot+ ')';
+  if (bf[1]) bf[1].textContent = 'DED ('   +ded+ ')';
+  if (bf[2]) bf[2].textContent = 'EFE ('   +efe+ ')';
+  if (bf[3]) bf[3].textContent = 'NO DED ('+nod+ ')';
+  if (bf[4]) bf[4].textContent = 'PEND ('  +pen+ ')';
+  if (bf[5]) bf[5].textContent = 'EGRESO ('+eg+  ')';
+  if (bf[6]) bf[6].textContent = 'CP01 ('  +cp+  ')';
+  const fmt = v => '$'+v.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  const el  = id => document.getElementById(id);
+  if (el('cnt-ded')) el('cnt-ded').textContent = ded+efe;
+  if (el('cnt-efe')) el('cnt-efe').textContent = efe;
+  if (el('cnt-nod')) el('cnt-nod').textContent = nod;
+  if (el('cnt-pen')) el('cnt-pen').textContent = pen;
+  if (el('cnt-tot')) el('cnt-tot').textContent = tot;
+  if (el('mnt-ded')) el('mnt-ded').textContent = fmt(mDed);
+  if (el('mnt-nod')) el('mnt-nod').textContent = fmt(mNod);
+  if (el('mnt-pen')) el('mnt-pen').textContent = fmt(mPen);
+  actualizarDiot();
+}
+
+/* ── ft(): activar filtro por botón ──────────────────────────── */
+function ft(t, btn) {
+  fa = t;
+  document.querySelectorAll('.fls .bf').forEach(b => b.classList.remove('ac'));
+  if (btn) btn.classList.add('ac');
+  dtable.draw();
+}
+
+/* ── ce(): color + data-est + localStorage ──────────────────────
+   FIX PRINCIPAL: función única con parámetro guardar=true.
+   La segunda definición anterior (sin guardarCambio) causaba que
+   los cambios del usuario no se persistieran en localStorage.
+   ─────────────────────────────────────────────────────────────── */
+function ce(sel, guardar = true) {
+  const v = sel.value;
+  const o = sel.dataset.original;
+  sel.className = 'se';
+
+  if      (v.includes('COMPLE'))                        sel.classList.add('complemento');
+  else if (v.includes('PEND'))                          sel.classList.add('pendiente');
+  else if (v.includes('NO DED') || v.includes('ERROR')) sel.classList.add('no-ded');
+  else if (v.includes('EGRESO'))                        sel.classList.add('egreso');
+  else if (v.includes('16 Y 0'))                        sel.classList.add('mix');
+  else if (v.includes('0%') && !v.includes('16'))       sel.classList.add('ded0');
+  else if (v.includes('16%'))                           sel.classList.add('ded16');
+  else                                                  sel.classList.add('no-ded');
+
+  if (v !== o) sel.classList.add('changed');
+  else         sel.classList.remove('changed');
+
+  const tr = sel.closest('tr');
+  if (tr) {
+    let est = 'no-ded';
+    if      (v.includes('COMPLE'))                        est = 'complemento';
+    else if (v.includes('PEND'))                          est = 'pendiente';
+    else if (v.includes('NO DED') || v.includes('ERROR')) est = 'no-ded';
+    else if (v.includes('EGRESO'))                        est = 'egreso';
+    else if (v.includes('EFE'))                           est = 'efe';
+    else if (v.includes('DED'))                           est = 'ded';
+    tr.setAttribute('data-est', est);
+
+    if (guardar) {
+      const uuid = (tr.cells[0] ? tr.cells[0].getAttribute('title') || '' : '').trim().toUpperCase();
+      if (uuid) {
+        if (v !== o) guardarCambio(uuid, v);
+        else         borrarCambio(uuid);
+      }
+    }
+  }
+  actualizarContadores();
+}
+
+/* ── limpiarCambios(): resetea al estado original ─────────────── */
+function limpiarCambios() {
+  if (!confirm('¿Borrar todos los cambios manuales y volver al estado original?')) return;
+  try { localStorage.removeItem(STORE_KEY); } catch(e) {}
+  location.reload();
+}
+
+/* ── rc(): recalcular estatus al editar montos ────────────────── */
+function rc(inp) {
+  const tr = inp.closest('tr');
+  if (!tr) return;
+  const ins = tr.querySelectorAll('.ip');
+  if (ins.length < 3) return;
+  const s2  = parseFloat(ins[0].value) || 0;
+  const i16 = parseFloat(ins[1].value) || 0;
+  const s0  = parseFloat(ins[2].value) || 0;
+  const sel = tr.querySelector('.se');
+  if (!sel) return;
+  const forma = (tr.cells[9]?.innerText  || '').trim();
+  const uso   = (tr.cells[10]?.innerText || '').trim();
+  const met   = (tr.cells[8]?.innerText  || '').trim();
+  const tot   = parseFloat((tr.cells[7]?.innerText || '0').replace(/[^0-9.]/g,'')) || 0;
+  const fp = forma.substring(0,2);
+  const uc = uso.substring(0,3).toUpperCase();
+  const mc = met.substring(0,3).toUpperCase();
+  if (uc === 'S01') { sel.value = 'NO DEDUCIBLE'; ce(sel); return; }
+  if (!['G01','G02','G03'].includes(uc) ||
+      !['PUE','PPD'].includes(mc)       ||
+      !['01','02','03','04','28'].includes(fp)) return;
+  if (fp==='01' && tot>=2000) { sel.value='NO DEDUCIBLE: Efectivo >= $2,000'; ce(sel); return; }
+  if (uc==='G02') { sel.value='EGRESO'; ce(sel); return; }
+  let suf = 'NO DEDUCIBLE';
+  if      (s2>0 && i16>0 && s0===0) suf='16%';
+  else if (s2>0 && i16>0 && s0>0)  suf='16 Y 0%';
+  else if (s2===0 && i16===0 && s0>0) suf='0%';
+  sel.value = (fp==='01' ? 'EFE ' : 'DED ') + suf;
+  ce(sel);
+}
+"""
+
+    # ── Ensamblado final del HTML ───────────────────────────────────
+    # El <head> con CSS no usa variables Python → concatenación directa
+    _head = (
+        '<!DOCTYPE html>\n'
+        '<html lang="es">\n'
+        '<head>\n'
+        '<meta charset="UTF-8">'
+        '<meta name="viewport" content="width=device-width,initial-scale=1.0">\n'
+        '<title>Reporte Fiscal ' + mes + ' - ReaDesF1.9</title>\n'
+        '<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue'
+        '&family=DM+Sans:wght@300;400;500;700'
+        '&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">\n'
+        '<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">\n'
+        '<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>\n'
+        '<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>\n'
+        '<style>\n' + _CSS + '\n</style>\n'
+        '</head><body>\n'
+    )
+
+    # El <body> con variables Python → format normal (sin CSS/JS)
+    _body = (
+        '<div class="hd"><div class="ht">\n'
+        '  <div class="lg"><span class="r">Rea</span><span class="d">Des</span>'
+        '<span class="f">F</span><span class="v">1.9</span></div>\n'
+        '  <div class="hm"><strong>REPORTE FISCAL - REGIMEN {reg_cod}</strong>'
+        '<br>{reg_nombre} . {mes}<br>Generado: {now}</div>\n'
+        '</div></div>\n'
+        '<div class="ps"><span class="pl">PUNTOS DEDUCIBLES:</span>'
+        '<span class="pv">PUE</span>'
+        '<span class="pv">01, 02, 03, 28</span>'
+        '<span class="pv">G01 Y G03</span></div>\n'
+        '<div class="cs">\n'
+        '  <div class="cd cd1 cd-click" onclick="toggleDiot(this)" title="Ver DIOT">'
+        '<div class="cl">DEDUCIBLES <span class="diot-ico">— DIOT</span></div>'
+        '<div class="cn" id="cnt-ded">{nd}</div><div class="cm" id="mnt-ded">${md}</div></div>\n'
+        '  <div class="cd cd5"><div class="cl">EFECTIVO</div>'
+        '<div class="cn" id="cnt-efe">{ne}</div></div>\n'
+        '  <div class="cd cd2"><div class="cl">NO DEDUCIBLES</div>'
+        '<div class="cn" id="cnt-nod">{nn}</div><div class="cm" id="mnt-nod">${mn}</div></div>\n'
+        '  <div class="cd cd3"><div class="cl">PENDIENTES</div>'
+        '<div class="cn" id="cnt-pen">{np}</div><div class="cm" id="mnt-pen">${mp}</div></div>\n'
+        '  <div class="cd cd4"><div class="cl">TOTAL FACTURAS</div>'
+        '<div class="cn" id="cnt-tot">{tf}</div></div>\n'
+        '</div>\n'
+        '<div class="leyenda"><span class="ley-tit">COLORES:</span>\n'
+        '  <span class="ley-item"><span class="ley-dot" style="background:#C6EFCE"></span>DED/EFE 16%</span>\n'
+        '  <span class="ley-item"><span class="ley-dot" style="background:#BDD7EE"></span>16 Y 0%</span>\n'
+        '  <span class="ley-item"><span class="ley-dot" style="background:#FFF3CD"></span>0%</span>\n'
+        '  <span class="ley-item"><span class="ley-dot" style="background:#E2CFED"></span>EGRESO</span>\n'
+        '  <span class="ley-item"><span class="ley-dot" style="background:#D5C6E0"></span>COMPLEMENTO</span>\n'
+        '  <span class="ley-item"><span class="ley-dot" style="background:#E0E0E0"></span>PENDIENTE</span>\n'
+        '  <span class="ley-item"><span class="ley-dot" style="background:#FFC7CE"></span>NO DEDUCIBLE</span>\n'
+        '</div>\n'
+        '<div class="fls"><span class="fll">FILTRAR:</span>\n'
+        '  <button class="bf ac"  onclick="ft(\'todos\',this)">TODOS ({tf})</button>\n'
+        '  <button class="bf bdd" onclick="ft(\'ded\',this)">DED ({ndd})</button>\n'
+        '  <button class="bf bef" onclick="ft(\'efe\',this)">EFE ({ne})</button>\n'
+        '  <button class="bf bno" onclick="ft(\'no-ded\',this)">NO DED ({nn})</button>\n'
+        '  <button class="bf bpp" onclick="ft(\'pendiente\',this)">PEND ({np})</button>\n'
+        '  <button class="bf beg" onclick="ft(\'egreso\',this)">EGRESO ({neg})</button>\n'
+        '  <button class="bf bcp" onclick="ft(\'complemento\',this)">CP01 ({nc})</button>\n'
+        '  <button class="bf breset" onclick="limpiarCambios()" title="Borrar cambios manuales y volver al original">↺ LIMPIAR</button>\n'
+        '  <button class="bf breset" onclick="exportarCambiosCSV()" title="Descargar cambios manuales como CSV de respaldo" style="border-color:#1976D2;color:#1976D2">⬇ EXPORTAR CAMBIOS</button>\n'
+        '</div>\n'
+        '<div class="bw">'
+        '<input id="bq-custom" class="bq" type="search" '
+        'placeholder="Buscar por UUID, razon social, monto...">'
+        '</div>\n'
+        '<div id="diot-section" style="display:none">{diot_html}</div>\n'
+        '<div class="tw"><table id="tbl" class="display" style="width:100%">\n'
+        '  <thead><tr>'
+        '<th>FOLIO FISCAL</th><th>UUID REL.</th><th>FECHA</th><th>RAZON SOCIAL</th>\n'
+        '    <th>SUBTOTAL 16%</th><th>IVA 16%</th><th>SUB 0%</th><th>TOTAL</th>\n'
+        '    <th>METODO</th><th>FORMA PAGO</th><th>USO CFDI</th>'
+        '<th>ESTATUS</th><th>COMPLEMENTOS / OBS</th>\n'
+        '  </tr></thead>\n'
+        '  <tbody>{fs}</tbody>\n'
+        '</table></div>\n'
+        '<footer>\n'
+        '  <div class="fl2"><span class="r">Rea</span>Des<span class="f">F</span></div>\n'
+        '  <div class="fi">Sinergia REA . ReaDesF1.9 . Mexico 2026<br>'
+        'Regimen {reg_cod} . {reg_nombre}<br>'
+        '{nd2} deducibles . {nn} no deducibles . {np} pendientes</div>\n'
+        '</footer>\n'
+    ).format(
         mes=mes, reg_cod=reg_cod, reg_nombre=reg_nombre, now=now_str,
         nd=n_ded+n_efe, md='{:,.2f}'.format(m_ded), ne=n_efe,
-        nn=n_no_ded, mn='{:,.2f}'.format(m_no_ded),
-        np=n_pend, mp='{:,.2f}'.format(m_pend),
+        nn=n_no_ded,    mn='{:,.2f}'.format(m_no_ded),
+        np=n_pend,      mp='{:,.2f}'.format(m_pend),
         tf=total_f, ndd=n_ded, neg=n_egreso, nc=n_comp,
-        nd2=n_ded+n_efe, fs=fs
+        nd2=n_ded+n_efe, fs=fs,
+        diot_html=generar_diot_html(filas, ppd_pend, idx_razones, mes)
     )
+
+    # El JS se concatena directo — sin .format() para no escapar sus llaves
+    html = _head + _body + '<script>\n' + _JS + '\n</script>\n</body></html>'
 
     with open(out, 'w', encoding='utf-8') as fp:
         fp.write(html)
     print('  HTML: %s' % out)
+
+
+def generar_diot_html(filas, ppd_pend, idx_razones, mes):
+    """
+    Genera la sección HTML de la DIOT (Informativa de Operaciones con Terceros).
+    Agrupa por RFC emisor, solo facturas deducibles (DED + EFE).
+
+    FIX v2.4: acumula sub2/iva16/sub0 sin round() intermedio para evitar
+    deriva de centavos al sumar N facturas. Se redondea solo al mostrar.
+    """
+    # Acumular por RFC — sin redondeo intermedio (float64 nativo)
+    proveedores = {}
+    for f in filas:
+        is_cp   = es_complemento(f)
+        estatus = calc_estatus(f, is_cp, ppd_pend, idx_razones).upper()
+
+        # Solo deducibles — excluir NO DED, PENDIENTE, COMPLEMENTO, EGRESO, ERROR
+        if not any(k in estatus for k in ('DED', 'EFE')):
+            continue
+        if any(k in estatus for k in ('NO DED', 'NO DEDUCIBLE', 'ERROR')):
+            continue
+
+        rfc   = f.get('rfc_em', '').strip().upper() or 'SIN RFC'
+        razon = f.get('razon_em', '').strip() or rfc
+
+        if rfc not in proveedores:
+            proveedores[rfc] = {
+                'razon': razon,
+                'rfc':   rfc,
+                'sub2':  0.0,
+                'iva16': 0.0,
+                'sub0':  0.0,
+                'total': 0.0,
+            }
+        p = proveedores[rfc]
+        # Usar float() sin round() — acumular con máxima precisión
+        p['sub2']  += float(f.get('sub2',  0.0) or 0.0)
+        p['iva16'] += float(f.get('iva16', 0.0) or 0.0)
+        p['sub0']  += float(f.get('sub0',  0.0) or 0.0)
+        p['total'] += float(f.get('total', 0.0) or 0.0)
+
+    if not proveedores:
+        return ''
+
+    # Redondear acumulados a 2 decimales (solo al final, no por fila)
+    for p in proveedores.values():
+        p['sub2']  = round(p['sub2'],  2)
+        p['iva16'] = round(p['iva16'], 2)
+        p['sub0']  = round(p['sub0'],  2)
+        p['total'] = round(p['total'], 2)
+
+    # Ordenar por razón social
+    filas_diot = sorted(proveedores.values(), key=lambda x: x['razon'])
+
+    # Totales
+    tot_sub2  = sum(p['sub2']  for p in filas_diot)
+    tot_iva16 = sum(p['iva16'] for p in filas_diot)
+    tot_sub0  = sum(p['sub0']  for p in filas_diot)
+    tot_total = sum(p['total'] for p in filas_diot)
+
+    def m(v):
+        return '${:,.2f}'.format(v) if v else '-'
+
+    # Construir filas HTML
+    rows = ''
+    for i, p in enumerate(filas_diot):
+        alt = ' diot-alt' if i % 2 == 0 else ''
+        rows += (
+            '<tr class="diot-row%s">'
+            '<td class="diot-rs">%s</td>'
+            '<td class="diot-rfc">%s</td>'
+            '<td class="diot-num">%s</td>'
+            '<td class="diot-num">%s</td>'
+            '<td class="diot-num">%s</td>'
+            '<td class="diot-tot">%s</td>'
+            '</tr>\n' % (
+                alt,
+                p['razon'], p['rfc'],
+                m(p['sub2']), m(p['iva16']), m(p['sub0']), m(p['total'])
+            )
+        )
+
+    # Fila de totales
+    rows += (
+        '<tr class="diot-totrow">'
+        '<td colspan="2" class="diot-tl">TOTALES</td>'
+        '<td class="diot-tot">%s</td>'
+        '<td class="diot-tot">%s</td>'
+        '<td class="diot-tot">%s</td>'
+        '<td class="diot-tot">%s</td>'
+        '</tr>\n' % (m(tot_sub2), m(tot_iva16), m(tot_sub0), m(tot_total))
+    )
+
+    return (
+        '<div class="diot-wrap">\n'
+        '  <div class="diot-hdr">\n'
+        '    <span class="diot-dash">—</span>\n'
+        '    <span class="diot-title">Informativa de operaciones con terceros (DIOT)</span>\n'
+        '    <span class="diot-mes">%s</span>\n'
+        '  </div>\n'
+        '  <div class="diot-tw">\n'
+        '  <table class="diot-tbl">\n'
+        '    <thead><tr>'
+        '<th>RAZÓN SOCIAL</th>'
+        '<th>RFC</th>'
+        '<th>ACT. PAGADAS 16%%</th>'
+        '<th>IVA PAGADO</th>'
+        '<th>ACT. PAGADO TASA 0%%</th>'
+        '<th>TOTAL</th>'
+        '</tr></thead>\n'
+        '    <tbody>%s</tbody>\n'
+        '  </table>\n'
+        '  </div>\n'
+        '</div>\n'
+    ) % (mes.upper(), rows)
 
 
 def generar_reporte(validado_path, mes_reporte=''):

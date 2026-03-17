@@ -3,6 +3,8 @@ motor_openpyxl.py — Motor para computadoras básicas
 ReaDesF1.8  (sin cambios funcionales respecto a v1.7 — fórmulas auditables ya correctas)
 """
 
+import zipfile
+import re
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.utils import get_column_letter
@@ -29,6 +31,45 @@ bold_black   = Font(bold=True)
 bold_result  = Font(bold=True)
 center_align = Alignment(horizontal='center')
 REG_FILLS    = {'626': blue_fill, '612': purple_fill, '616': brown_fill}
+
+
+def _parchear_cache_formulas(xlsx_path: str, cache: dict) -> None:
+    """
+    Inserta valores cacheados en celdas con fórmulas del xlsx vía XML.
+    cache = { 'AG5': 1234.56, 'AH5': 0.0, ... }
+
+    Antes: <c r="AG5"><f>E5-F5</f><v></v></c>   ← openpyxl data_only lee None
+    Después:<c r="AG5"><f>E5-F5</f><v>1234.56</v></c> ← lee 1234.56 sin Excel
+
+    Esta es la única forma correcta de tener fórmula viva + valor cacheado
+    en openpyxl. c._value = num sobreescribe la fórmula con el número.
+    """
+    with zipfile.ZipFile(xlsx_path, 'r') as zin:
+        contents = {n: zin.read(n) for n in zin.namelist()}
+
+    sheet_key = 'xl/worksheets/sheet1.xml'
+    xml = contents[sheet_key].decode('utf-8')
+
+    def replacer(m):
+        ref = m.group(1)
+        if ref not in cache:
+            return m.group(0)
+        val = cache[ref]
+        if isinstance(val, float) and val == int(val):
+            sv = str(int(val))
+        else:
+            sv = f'{val:.10f}'.rstrip('0').rstrip('.')
+        return m.group(0).replace('<v></v>', f'<v>{sv}</v>')
+
+    xml_patched = re.sub(
+        r'<c r="([A-Z]+\d+)"[^>]*><f>[^<]*</f><v></v></c>',
+        replacer, xml
+    )
+    contents[sheet_key] = xml_patched.encode('utf-8')
+
+    with zipfile.ZipFile(xlsx_path, 'w', zipfile.ZIP_DEFLATED) as zout:
+        for name, data in contents.items():
+            zout.writestr(name, data)
 
 
 def procesar_con_openpyxl(file_path: str, output_path: str,
@@ -110,6 +151,17 @@ def procesar_con_openpyxl(file_path: str, output_path: str,
              'ins_nd','ins_menor','ins_elec','s01','ef_mayor']}
     stats['regimenes'] = {}
 
+    # Cache fórmulas: { 'AG5': 1234.56 } — se parcha en XML al final
+    _cache_formulas = {}
+
+    # wc() definida UNA VEZ fuera del loop
+    def wc(col, formula, num_val):
+        c = sheet.cell(rn, col, formula)
+        c.number_format = "0.00"
+        c.font = bold_result
+        # Acumular en cache para parche XML posterior
+        _cache_formulas[f'{get_column_letter(col)}{rn}'] = num_val
+
     print("  🔄 Procesando...")
 
     for idx, row_cells in enumerate(
@@ -168,18 +220,31 @@ def procesar_con_openpyxl(file_path: str, output_path: str,
         # sub1, sub0, sub2, iva_acred son la segunda validación contable.
         fa = formulas_auditables(rn, CL)
 
-        def wc(col, val):
-            c = sheet.cell(rn, col, val)
-            c.number_format = "0.00"
-            c.font = bold_result
+        # sub0: gasolina con IEPS → solo iva0 (el exento ya está incluido, no duplicar)
+        f_sub0 = fa['sub0_gas'] if (es_gas and (ieps_g_v > 0 or ieps_nd_v > 0)) else fa['sub0']
 
-        wc(sub1_c, f_sub1)
-        wc(sub0_c, fa['sub0'])
-        wc(sub2_c, fa['sub2'])
-        wc(iva_ac,  fa['iva_acred'])
-        wc(c_iva,   fa['c_iva'])
-        wc(t2_c,    fa['t2'])
-        wc(comp_c,  fa['comprob'])
+        # ── Valores numéricos cacheados ────────────────────────────────
+        # Se escriben junto con la fórmula para que openpyxl pueda
+        # leerlos sin depender de que Excel evalúe las fórmulas.
+        ieps_activo = ieps_nd_v if ieps_nd_v > 0 else ieps_g_v
+        v_sub1 = round(st_v - dc_v + (ieps_8_v if ieps_8_v > 0 else 0), 2)
+        if es_gas and (ieps_g_v > 0 or ieps_nd_v > 0):
+            v_sub1 = round(st_v - dc_v, 2)
+        v_sub0 = round(iva0_v, 2) if (ieps_activo > 0 and abs(iva0_v - iva_ex_v) < 0.01) \
+                 else round(iva0_v + iva_ex_v, 2)
+        v_sub2      = round(max(v_sub1 - v_sub0, 0), 2)
+        v_iva_acred = round(v_sub2 * 0.16, 2)
+        v_c_iva     = round(v_iva_acred - iva16_v, 2)
+        v_t2        = round(v_sub2 + v_sub0 + iva16_v, 2)
+        v_comprob   = round(total - v_t2, 2)
+
+        wc(sub1_c, f_sub1,      v_sub1)
+        wc(sub0_c, f_sub0,      v_sub0)
+        wc(sub2_c, fa['sub2'],  v_sub2)
+        wc(iva_ac,  fa['iva_acred'], v_iva_acred)
+        wc(c_iva,   fa['c_iva'],     v_c_iva)
+        wc(t2_c,    fa['t2'],        v_t2)
+        wc(comp_c,  fa['comprob'],   v_comprob)
 
         # Validación visual IVA
         sub1_calc = st_v - dc_v + (ieps_8_v if ieps_8_v > 0 else 0)
@@ -262,5 +327,7 @@ def procesar_con_openpyxl(file_path: str, output_path: str,
     sheet.column_dimensions[get_column_letter(razon_col)].width = 65
 
     wb.save(output_path)
+    print(f"  🔧 Insertando valores cacheados en fórmulas ({len(_cache_formulas):,} celdas)...")
+    _parchear_cache_formulas(output_path, _cache_formulas)
     print(f"  ✅ Guardado: {output_path}")
     return stats

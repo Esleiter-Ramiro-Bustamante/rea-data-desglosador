@@ -1,80 +1,111 @@
-# ReaDesF - Validador Fiscal
-# Archivo .gitignore para proteger datos sensibles
+# ============================================================
+# ReaDesF1.9 — Validador Fiscal Adaptativo
+# .gitignore — Protección de datos fiscales sensibles
+# ============================================================
 
 # ==============================
-# Archivos Excel (datos reales)
+# Archivos Excel — datos reales
 # ==============================
 *.xlsx
 *.xls
 *.xlsm
 *.csv
 
+# Excepciones: ejemplos de prueba sin datos reales
+# (descomenta si necesitas incluir algún Excel de muestra)
+# !ejemplo_muestra.xlsx
+
+# ==============================
+# Archivos generados por el sistema
+# ==============================
+*_validado.xlsx
+*_reporte.xlsx
+*_reporte.html
+*_ANONIMIZADO_*.xlsx
+*.tmp
+*.tmp.xlsx
+
 # ==============================
 # Logs de auditoría
 # ==============================
 logs_auditoria/
-auditoria_*/
 *.log
-
-# ==============================
-# Archivos temporales
-# ==============================
-*_validado.xlsx
-*_ANONIMIZADO_*.xlsx
-*.tmp
-*.temp
 
 # ==============================
 # Datos de prueba sensibles
 # ==============================
 /test_data/
 /ejemplos_reales/
+/datos_prueba/
+GGQUIALA*/
+GGGUADALUPE*/
 
 # ==============================
 # Configuración local
 # ==============================
 config_local.py
+configuracion_local.py
 .env
+*.env
 
 # ==============================
-# Python
+# Python — caché y compilados
 # ==============================
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+
+# ==============================
+# Python — entornos virtuales
+# ==============================
+.venv/
+venv/
+env/
+ENV/
+
+# ==============================
+# Python — distribución y empaquetado
+# ==============================
 build/
-develop-eggs/
 dist/
+*.egg-info/
+*.egg
+wheels/
+develop-eggs/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
 parts/
 sdist/
 var/
-wheels/
-*.egg-info/
+lib/
+lib64/
 .installed.cfg
-*.egg
 
 # ==============================
-# IDEs
+# IDEs y editores
 # ==============================
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+*.sublime-project
+*.sublime-workspace
 
 # ==============================
 # Sistema Operativo
 # ==============================
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
 Thumbs.db
 desktop.ini
+ehthumbs.db
 
 # ==============================
 # Backups
@@ -82,3 +113,15 @@ desktop.ini
 *.bak
 *.backup
 *_backup/
+*_old.py
+*_PRUEBA.py
+* PRUEBA.py
+
+# ==============================
+# Archivos obsoletos del proyecto
+# ==============================
+ReaDesF1.3.py
+ReaDesV1.0.py
+generador_reporte PRUEBA.py
+index.html
+gitignore

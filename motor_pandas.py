@@ -9,6 +9,8 @@ NUEVO EN v1.8:
     (sub1, sub0, sub2, iva_acred — segunda validación contable)
 """
 
+import zipfile
+import re
 import pandas as pd
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
@@ -45,6 +47,28 @@ def _extraer_serie(s: pd.Series) -> pd.Series:
     return s2.str.split('-').str[0].str.strip().where(mask, s2).str.upper()
 
 
+def _parchear_cache_formulas(xlsx_path: str, cache: dict) -> None:
+    """Inserta valores cacheados en fórmulas del xlsx vía XML."""
+    with zipfile.ZipFile(xlsx_path, 'r') as zin:
+        contents = {n: zin.read(n) for n in zin.namelist()}
+    sheet_key = 'xl/worksheets/sheet1.xml'
+    xml = contents[sheet_key].decode('utf-8')
+    def replacer(m):
+        ref = m.group(1)
+        if ref not in cache: return m.group(0)
+        val = cache[ref]
+        sv = str(int(val)) if isinstance(val, float) and val == int(val) \
+             else f'{val:.10f}'.rstrip('0').rstrip('.')
+        return m.group(0).replace('<v></v>', f'<v>{sv}</v>')
+    xml_patched = re.sub(
+        r'<c r="([A-Z]+\d+)"[^>]*><f>[^<]*</f><v></v></c>',
+        replacer, xml)
+    contents[sheet_key] = xml_patched.encode('utf-8')
+    with zipfile.ZipFile(xlsx_path, 'w', zipfile.ZIP_DEFLATED) as zout:
+        for name, data in contents.items():
+            zout.writestr(name, data)
+
+
 def procesar_con_pandas(file_path: str, output_path: str,
                         modo: str = 'TURBO') -> dict:
 
@@ -67,7 +91,9 @@ def procesar_con_pandas(file_path: str, output_path: str,
         return None
     def ac(n, d=None):
         c = gc(n)
-        if c is None: df[n] = d if d is not None else ''; return n
+        if c is None:
+            df[n] = d if d is not None else ''
+            return n
         return c
 
     C = {k: ac(v, '0' if k != 'concepto' else '') for k,v in {
@@ -127,7 +153,9 @@ def procesar_con_pandas(file_path: str, output_path: str,
     dc = df[C['descuento']]
     df['_sub1']     = (st - dc + i8.where(i8 > 0, 0)).round(2)
     df.loc[mask_ieps_gas, '_sub1'] = (st - dc)[mask_ieps_gas].round(2)
-    df['_sub0']     = (df[C['iva0']] + df[C['iva_ex']]).round(2)
+    # sub0: gasolina con IEPS → solo iva0 (iva_ex es el mismo valor, no duplicar)
+    df['_sub0'] = (df[C['iva0']] + df[C['iva_ex']]).round(2)
+    df.loc[mask_ieps_gas, '_sub0'] = df.loc[mask_ieps_gas, C['iva0']].round(2)
     df['_sub2']     = (df['_sub1'] - df['_sub0']).round(2)
     df['_iva_acred']= (df['_sub2'] * 0.16).round(2)
     df['_iva_ok']   = (df['_iva_acred'] - df[C['iva16']]).abs() < 0.01
@@ -135,6 +163,20 @@ def procesar_con_pandas(file_path: str, output_path: str,
     # Columnas de salida
     df['Deducible']          = df['_deducible']
     df['Razón No Deducible'] = df['_razon']
+
+    # ── CRÍTICO: agregar columnas de cálculo al df ANTES de to_excel() ──
+    # Si no existen en el Excel, openpyxl no las encontrará con fc()
+    # y wf() no escribirá ninguna fórmula auditable → celdas en 0.
+    # Se escriben con el valor numérico calculado; openpyxl las
+    # sobreescribirá con la fórmula Excel viva en el paso 7.
+    df['SUB1-16%']            = df['_sub1']
+    df['SUB0%']               = df['_sub0']
+    df['SUB2-16%']            = df['_sub2']
+    df['IVA ACREDITABLE 16%'] = df['_iva_acred']
+    iva16_s = df[C['iva16']].fillna(0).astype(float)
+    df['C IVA']               = (df['_iva_acred'] - iva16_s).round(2)
+    df['T2']                  = (df['_sub2'] + df['_sub0'] + iva16_s).round(2)
+    df['Comprobación T2']     = (df[C['total']].fillna(0).astype(float) - df['T2']).round(2)
 
     # Guardar con pandas (rápido)
     cols_internas = [c for c in df.columns if c.startswith('_')]
@@ -200,7 +242,17 @@ def procesar_con_pandas(file_path: str, output_path: str,
     c_i8_col = fc('IEPS Trasladado 8%')
     if c_i8_col: CL['I8'] = get_column_letter(c_i8_col)
 
+    df['_ieps_gas_ok'] = mask_ieps_gas
+
     fmt = "0.00"
+    _cache_formulas = {}
+
+    def wf(col, formula, num_val):
+        if col:
+            c = sheet.cell(rn, col, formula)
+            c.number_format = fmt
+            c.font = Font(bold=True)
+            _cache_formulas[f'{get_column_letter(col)}{rn}'] = num_val
 
     for idx in range(len(df)):
         rn      = idx + 2
@@ -229,19 +281,28 @@ def procesar_con_pandas(file_path: str, output_path: str,
         # ══════════════════════════════════════════════════════════
         fa = formulas_auditables(rn, CL)
 
-        def wf(col, val):
-            if col:
-                c = sheet.cell(rn, col, val)
-                c.number_format = fmt
-                c.font = Font(bold=True)
+        # sub0: gasolina con IEPS → sub0_gas (solo iva0, no duplicar iva_ex)
+        ieps_g_v  = float(row_df.get(c_ieps_g,  0) or 0) if c_ieps_g  else 0
+        ieps_nd_v = float(row_df.get(c_ieps_nd, 0) or 0) if c_ieps_nd else 0
+        f_sub0 = fa['sub0_gas'] if (es_gas_v and (ieps_g_v > 0 or ieps_nd_v > 0)) else fa['sub0']
 
-        wf(c_sub1, fa['sub1_ieps8'] if i8_v > 0 else fa['sub1'])
-        wf(c_sub0, fa['sub0'])
-        wf(c_sub2, fa['sub2'])
-        wf(c_iva_a,fa['iva_acred'])
-        wf(c_civa, fa['c_iva'])
-        wf(c_t2,   fa['t2'])
-        wf(c_comp, fa['comprob'])
+        # Valores numéricos ya calculados en el DataFrame
+        v_sub1      = float(row_df.get('_sub1',      0) or 0)
+        v_sub0      = float(row_df.get('_sub0',      0) or 0)
+        v_sub2      = float(row_df.get('_sub2',      0) or 0)
+        v_iva_acred = float(row_df.get('_iva_acred', 0) or 0)
+        iva16_v     = float(row_df.get(C['iva16'],   0) or 0)
+        v_c_iva     = round(v_iva_acred - iva16_v, 2)
+        v_t2        = round(v_sub2 + v_sub0 + iva16_v, 2)
+        v_comprob   = round(total_v - v_t2, 2)
+
+        wf(c_sub1, fa['sub1_ieps8'] if i8_v > 0 else fa['sub1'], v_sub1)
+        wf(c_sub0, f_sub0,          v_sub0)
+        wf(c_sub2, fa['sub2'],      v_sub2)
+        wf(c_iva_a, fa['iva_acred'], v_iva_acred)
+        wf(c_civa,  fa['c_iva'],     v_c_iva)
+        wf(c_t2,    fa['t2'],        v_t2)
+        wf(c_comp,  fa['comprob'],   v_comprob)
 
         # Validación visual IVA
         if c_i16 and c_iva_a and iva_ok_v:
@@ -319,6 +380,8 @@ def procesar_con_pandas(file_path: str, output_path: str,
         if c: sheet.column_dimensions[get_column_letter(c)].width = 15
 
     wb.save(output_path)
+    print(f"  🔧 Insertando valores cacheados ({len(_cache_formulas):,} celdas)...")
+    _parchear_cache_formulas(output_path, _cache_formulas)
     print(f"  ✅ Fórmulas auditables y colores aplicados")
 
     # Estadísticas

@@ -245,6 +245,12 @@ def formulas_auditables(rn: int, CL: dict) -> dict:
         # Monto que NO genera IVA acreditable
         'sub0': f"={CL['I0']}{rn}+{CL['IE']}{rn}",
 
+        # ── Fórmula 2b: SUB0 gasolina con IEPS ────────────────────
+        # Cuando es gasolina con IEPS, el motor ya puso el IEPS en
+        # IVA_0%. IVA_Exento tiene el mismo valor → no sumar (duplica)
+        # sub0_gas = iva0   (solo uno, sin exento)
+        'sub0_gas': f"={CL['I0']}{rn}",
+
         # ── Fórmula 3: SUB2 — Base para IVA 16% ───────────────────
         # sub2 = sub1 - sub0
         # La porción que SÍ genera IVA acreditable
