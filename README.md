@@ -31,6 +31,13 @@ Solo ejecutas `main.py`. El programa mide tu RAM y el tamaño del archivo, elige
 | DIOT integrada | Informativa de Operaciones con Terceros — agrupada por RFC, actualización en tiempo real |
 | Complementos CP01 | Cruce por UUID directo o por RFC+total cuando el UUID relacionado viene vacío |
 | Forma 99 PPD | Se clasifica como PENDIENTE (no ERROR) — flujo correcto del SAT |
+| **IEPS 3% telefonía** | Telmex, Telcel, Izzi, Axtel, etc. detectados — `sub1_ieps3` en los 3 motores igual que IEPS 8% dulces |
+| **Fix motor chunks** | Motor chunks ahora incluye IEPS 3% completo — antes no tenía nada de esa columna |
+| **Fix reportes HTML/Excel** | Import `generador_reporteCORE` corregido a `generador_reporte` — los reportes ahora sí se generan |
+| **Dashboard: persistencia total** | `beforeunload` guarda antes de cerrar · `guardarFila` corregido · montos y estatus sobreviven al recargar |
+| **Dashboard: recálculo en tiempo real** | `oninput` reemplaza `onchange` — el total se actualiza mientras escribes |
+| **Dashboard: inputs limpios** | `type="text"` reemplaza `type="number"` — sin flechitas ni spinner |
+| **Dashboard: CSS propio** | CSS de DataTables CDN eliminado — colores por estatus ya no se pisan al redibujar |
 
 ---
 
@@ -265,6 +272,12 @@ ReaDesF1.9/
 - [x] Fix SUB0% gasolina con IEPS (no duplicar)
 - [x] Cruce CP01 ↔ PPD por RFC + total
 - [x] Forma 99 PPD → PENDIENTE (correcto SAT)
+- [x] IEPS 3% telefonía — Telmex, Telcel, Izzi, Axtel (los 3 motores)
+- [x] Fix import generador — reportes HTML y Excel siempre se generan
+- [x] Dashboard: persistencia total al recargar (montos + estatus)
+- [x] Dashboard: total se recalcula en tiempo real al escribir
+- [x] Dashboard: inputs sin flechitas de número
+- [x] Dashboard: CSS propio — colores no se pisan por DataTables
 
 ### 🟡 Corto plazo — v2.0
 - [ ] `configuracion.py` externo — sin hardcodear rutas ni límites

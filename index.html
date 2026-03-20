@@ -674,6 +674,7 @@
     <span class="tag tag-amarillo">ART. 103 LISR</span>
     <span class="tag tag-rosa">ART. 27 FRACC. III</span>
     <span class="tag tag-azul">IEPS 8%</span>
+    <span class="tag tag-rosa">IEPS 3% TELEFONÍA</span>
     <span class="tag tag-amarillo">INSUMOS AGRÍCOLAS</span>
     <span class="tag tag-rosa">DIOT</span>
     <span class="tag tag-azul">DASHBOARD HTML</span>
@@ -1245,13 +1246,15 @@
 
     <div class="timeline-item current" style="border-color:var(--amarillo)">
       <div class="tv-ver" style="color:var(--amarillo)">v1.9 — ACTUAL ⭐</div>
-      <div class="tv-title">Reporte + Dashboard HTML + DIOT + Fórmulas Cacheadas</div>
+      <div class="tv-title">Reporte + Dashboard HTML + DIOT + IEPS 3% + Fixes</div>
       <div class="tv-desc">
         <strong>generador_reporte.py</strong> — nuevo módulo que genera 3 archivos desde el _validado.
         Dashboard HTML interactivo con filtros, buscador, estatus editable y localStorage.
         DIOT automática agrupada por RFC. Cruce CP01↔PPD por RFC+total.
-        Fórmulas auditables con valor numérico cacheado en el XML — Python las lee sin depender de Excel.
-        Fix SUB0% gasolina con IEPS sin duplicar. Forma 99 PPD → PENDIENTE correcto SAT.
+        Fórmulas auditables con valor numérico cacheado en el XML.<br><br>
+        <strong>IEPS 3% telefonía</strong> — Telmex, Telcel, Izzi, Axtel detectados y procesados igual que IEPS 8% en los 3 motores.<br>
+        <strong>Fix reportes</strong> — import corregido, reportes HTML y Excel siempre se generan.<br>
+        <strong>Dashboard mejorado</strong> — persistencia total al recargar (montos + estatus), recálculo en tiempo real, inputs sin flechitas, CSS propio sin conflictos DataTables.
       </div>
     </div>
 
@@ -1279,6 +1282,11 @@
       <div class="rm-item"><div class="rm-dot dot-now"></div>Fórmulas cacheadas en XML</div>
       <div class="rm-item"><div class="rm-dot dot-now"></div>Fix SUB0% gasolina IEPS</div>
       <div class="rm-item"><div class="rm-dot dot-now"></div>Cruce CP01↔PPD por RFC+total</div>
+      <div class="rm-item"><div class="rm-dot dot-now"></div>IEPS 3% telefonía — 3 motores</div>
+      <div class="rm-item"><div class="rm-dot dot-now"></div>Fix reportes siempre generados</div>
+      <div class="rm-item"><div class="rm-dot dot-now"></div>Dashboard: recálculo tiempo real</div>
+      <div class="rm-item"><div class="rm-dot dot-now"></div>Dashboard: inputs sin flechitas</div>
+      <div class="rm-item"><div class="rm-dot dot-now"></div>Dashboard: CSS sin conflictos</div>
     </div>
 
     <div class="rm-col">
@@ -1328,6 +1336,7 @@
     <span class="footer-tag">RÉGIMEN 612</span>
     <span class="footer-tag">RÉGIMEN 626 RESICO</span>
     <span class="footer-tag">IEPS 8%</span>
+    <span class="footer-tag">IEPS 3% TELEFONÍA</span>
     <span class="footer-tag">INSUMOS AGRÍCOLAS</span>
     <span class="footer-tag">ADAPTIVE PROCESSING</span>
     <span class="footer-tag">FÓRMULAS AUDITABLES</span>
