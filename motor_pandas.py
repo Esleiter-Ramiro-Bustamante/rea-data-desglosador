@@ -151,7 +151,8 @@ def procesar_con_pandas(file_path: str, output_path: str,
     # Las FÓRMULAS AUDITABLES se escriben en el paso 7 vía openpyxl.
     st = df[C['subtotal']]
     dc = df[C['descuento']]
-    df['_sub1']     = (st - dc + i8.where(i8 > 0, 0)).round(2)
+    i3 = df[fc('IEPS Trasladado 3%')].fillna(0).astype(float) if fc('IEPS Trasladado 3%') else pd.Series(0, index=df.index)
+    df['_sub1']     = (st - dc + i8.where(i8 > 0, 0) + i3.where(i3 > 0, 0)).round(2)
     df.loc[mask_ieps_gas, '_sub1'] = (st - dc)[mask_ieps_gas].round(2)
     # sub0: gasolina con IEPS → solo iva0 (iva_ex es el mismo valor, no duplicar)
     df['_sub0'] = (df[C['iva0']] + df[C['iva_ex']]).round(2)
@@ -241,6 +242,8 @@ def procesar_con_pandas(file_path: str, output_path: str,
 
     c_i8_col = fc('IEPS Trasladado 8%')
     if c_i8_col: CL['I8'] = get_column_letter(c_i8_col)
+    c_i3_col = fc('IEPS Trasladado 3%')
+    if c_i3_col: CL['I3'] = get_column_letter(c_i3_col)
 
     df['_ieps_gas_ok'] = mask_ieps_gas
 
@@ -269,6 +272,7 @@ def procesar_con_pandas(file_path: str, output_path: str,
         ded_val  = str(row_df.get('_deducible', 'NO'))
         total_v  = float(row_df.get(C['total'], 0) or 0)
         i8_v     = float(row_df.get(c_ieps8, 0) or 0) if c_ieps8 else 0
+        i3_v     = float(row_df.get(c_i3_col, 0) or 0) if c_i3_col else 0
         es_ded   = (ded_val == 'SI')
 
         # ══════════════════════════════════════════════════════════
@@ -296,7 +300,13 @@ def procesar_con_pandas(file_path: str, output_path: str,
         v_t2        = round(v_sub2 + v_sub0 + iva16_v, 2)
         v_comprob   = round(total_v - v_t2, 2)
 
-        wf(c_sub1, fa['sub1_ieps8'] if i8_v > 0 else fa['sub1'], v_sub1)
+        if i8_v > 0:
+            f_sub1 = fa['sub1_ieps8']
+        elif i3_v > 0:
+            f_sub1 = fa['sub1_ieps3']
+        else:
+            f_sub1 = fa['sub1']
+        wf(c_sub1, f_sub1,          v_sub1)
         wf(c_sub0, f_sub0,          v_sub0)
         wf(c_sub2, fa['sub2'],      v_sub2)
         wf(c_iva_a, fa['iva_acred'], v_iva_acred)

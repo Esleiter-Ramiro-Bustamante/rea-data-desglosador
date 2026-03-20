@@ -137,10 +137,11 @@ def procesar_con_chunks(file_path: str, output_path: str,
     c_ieps8  = gc('IEPS Trasladado 8%')
     c_ieps_g = gc('IEPS Trasladado')
     c_ieps_nd= gc('IEPS Trasladado No Desglosado')
+    c_ieps3  = gc('IEPS Trasladado 3%')
 
     for nc in ['total','subtotal','descuento','iva0','iva_ex','iva16']:
         df_full[C[nc]] = pd.to_numeric(df_full[C[nc]], errors='coerce').fillna(0)
-    for ic in [c_ieps8, c_ieps_g, c_ieps_nd]:
+    for ic in [c_ieps8, c_ieps_g, c_ieps_nd, c_ieps3]:
         if ic: df_full[ic] = pd.to_numeric(df_full[ic], errors='coerce').fillna(0)
 
     # Columnas internas globales (para todos los bloques)
@@ -173,7 +174,8 @@ def procesar_con_chunks(file_path: str, output_path: str,
     # Cálculos para fórmulas
     st = df_full[C['subtotal']]
     dc = df_full[C['descuento']]
-    df_full['_sub1']     = (st - dc + i8.where(i8 > 0, 0)).round(2)
+    i3 = df_full[c_ieps3].fillna(0) if c_ieps3 else pd.Series(0, index=df_full.index)
+    df_full['_sub1']     = (st - dc + i8.where(i8 > 0, 0) + i3.where(i3 > 0, 0)).round(2)
     df_full.loc[mask_ig, '_sub1'] = (st - dc)[mask_ig].round(2)
     # sub0: gasolina con IEPS → solo iva0 (iva_ex es el mismo valor, no duplicar)
     df_full['_sub0'] = (df_full[C['iva0']] + df_full[C['iva_ex']]).round(2)
@@ -249,6 +251,8 @@ def procesar_con_chunks(file_path: str, output_path: str,
         if c: CL[key] = get_column_letter(c)
     c_i8_col = fc('IEPS Trasladado 8%')
     if c_i8_col: CL['I8'] = get_column_letter(c_i8_col)
+    c_i3_col = fc('IEPS Trasladado 3%')
+    if c_i3_col: CL['I3'] = get_column_letter(c_i3_col)
 
     # Cache fórmulas y wf() definidos UNA VEZ fuera de todos los loops
     _cache_formulas = {}
@@ -283,6 +287,7 @@ def procesar_con_chunks(file_path: str, output_path: str,
             ded_val  = str(row_df.get('_deducible','NO'))
             total_v  = float(row_df.get(C['total'], 0) or 0)
             i8_v     = float(row_df.get(c_ieps8, 0) or 0) if c_ieps8 else 0
+            i3_v     = float(row_df.get(c_ieps3, 0) or 0) if c_ieps3 else 0
             es_ded   = (ded_val == 'SI')
 
             # ══════════════════════════════════════════════════════
@@ -310,7 +315,13 @@ def procesar_con_chunks(file_path: str, output_path: str,
             v_t2        = round(v_sub2 + v_sub0 + iva16_v, 2)
             v_comprob   = round(total_v - v_t2, 2)
 
-            wf(c_sub1, fa['sub1_ieps8'] if i8_v > 0 else fa['sub1'], v_sub1)
+            if i8_v > 0:
+                f_sub1 = fa['sub1_ieps8']
+            elif i3_v > 0:
+                f_sub1 = fa['sub1_ieps3']
+            else:
+                f_sub1 = fa['sub1']
+            wf(c_sub1, f_sub1,           v_sub1)
             wf(c_sub0, f_sub0,           v_sub0)
             wf(c_sub2, fa['sub2'],       v_sub2)
             wf(c_iva_a, fa['iva_acred'], v_iva_acred)

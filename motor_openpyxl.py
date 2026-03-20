@@ -109,6 +109,7 @@ def procesar_con_openpyxl(file_path: str, output_path: str,
     }.items()}
 
     ieps_8_col  = fc('IEPS Trasladado 8%')
+    ieps_3_col  = fc('IEPS Trasladado 3%')
     ieps_g_col  = fc('IEPS Trasladado')
     ieps_nd_col = fc('IEPS Trasladado No Desglosado')
     efecto_col  = fc('Efecto')
@@ -143,6 +144,7 @@ def procesar_con_openpyxl(file_path: str, output_path: str,
         'S2':sub2_c,'IA':iva_ac,'T2':t2_c,
     }.items()}
     if ieps_8_col:  CL['I8']  = get_column_letter(ieps_8_col)
+    if ieps_3_col:  CL['I3']  = get_column_letter(ieps_3_col)
     if ieps_g_col:  CL['IG']  = get_column_letter(ieps_g_col)
     if ieps_nd_col: CL['IND'] = get_column_letter(ieps_nd_col)
 
@@ -187,9 +189,10 @@ def procesar_con_openpyxl(file_path: str, output_path: str,
 
         stats['regimenes'][regimen] = stats['regimenes'].get(regimen,0) + 1
 
-        es_gas, es_dulce, es_insumo = detectar_tipo(concepto_lower)
+        es_gas, es_dulce, es_insumo, es_telecom = detectar_tipo(concepto_lower)
 
         ieps_8_v  = float(row_cells[ieps_8_col -1].value or 0) if ieps_8_col  else 0.0
+        ieps_3_v  = float(row_cells[ieps_3_col -1].value or 0) if ieps_3_col  else 0.0
         ieps_g_v  = float(row_cells[ieps_g_col -1].value or 0) if ieps_g_col  else 0.0
         ieps_nd_v = float(row_cells[ieps_nd_col-1].value or 0) if ieps_nd_col else 0.0
 
@@ -199,6 +202,11 @@ def procesar_con_openpyxl(file_path: str, output_path: str,
             if es_dulce:
                 sheet.cell(rn, COL['concepto']).fill = pink_fill
                 stats['dulces_ieps8'] += 1
+        elif ieps_3_v > 0:
+            f_sub1 = formulas_auditables(rn, CL)['sub1_ieps3']
+            sheet.cell(rn, COL['concepto']).fill = PatternFill(
+                start_color='E8D5F5', end_color='E8D5F5', fill_type='solid')
+            stats['telecom_ieps3'] = stats.get('telecom_ieps3', 0) + 1
         elif es_gas and (ieps_g_v > 0 or ieps_nd_v > 0):
             ig = ieps_g_v if ieps_g_v > 0 else ieps_nd_v
             c  = sheet.cell(rn, COL['iva0'])
@@ -227,7 +235,7 @@ def procesar_con_openpyxl(file_path: str, output_path: str,
         # Se escriben junto con la fórmula para que openpyxl pueda
         # leerlos sin depender de que Excel evalúe las fórmulas.
         ieps_activo = ieps_nd_v if ieps_nd_v > 0 else ieps_g_v
-        v_sub1 = round(st_v - dc_v + (ieps_8_v if ieps_8_v > 0 else 0), 2)
+        v_sub1 = round(st_v - dc_v + (ieps_8_v if ieps_8_v > 0 else 0) + (ieps_3_v if ieps_3_v > 0 else 0), 2)
         if es_gas and (ieps_g_v > 0 or ieps_nd_v > 0):
             v_sub1 = round(st_v - dc_v, 2)
         v_sub0 = round(iva0_v, 2) if (ieps_activo > 0 and abs(iva0_v - iva_ex_v) < 0.01) \
@@ -247,7 +255,7 @@ def procesar_con_openpyxl(file_path: str, output_path: str,
         wc(comp_c,  fa['comprob'],   v_comprob)
 
         # Validación visual IVA
-        sub1_calc = st_v - dc_v + (ieps_8_v if ieps_8_v > 0 else 0)
+        sub1_calc = st_v - dc_v + (ieps_8_v if ieps_8_v > 0 else 0) + (ieps_3_v if ieps_3_v > 0 else 0)
         iva_calc  = round((sub1_calc - (iva0_v + iva_ex_v)) * 0.16, 2)
         if abs(iva_calc - iva16_v) < 0.01:
             sheet.cell(rn, iva_ac).fill        = green_fill

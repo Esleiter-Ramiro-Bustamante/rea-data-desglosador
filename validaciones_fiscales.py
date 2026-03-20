@@ -148,6 +148,23 @@ PATRON_DULCE: re.Pattern = re.compile(
 PATRON_INSUMO: re.Pattern = re.compile(
     '|'.join(re.escape(p) for p in PALABRAS_INSUMO), re.IGNORECASE)
 
+PALABRAS_TELECOM: set = {
+    # Operadoras
+    'telmex', 'telcel', 'att', 'izzi', 'axtel', 'megacable',
+    'totalplay', 'telecomunicaciones', 'telecomunicacion',
+    'telecomunicación', 'telecomunicaciones de mexico',
+    'telefonos de mexico', 'teléfonos de méxico',
+    # Servicios
+    'telefonia', 'telefonía', 'servicio telefonico',
+    'servicio telefónico', 'servicio de telecomunicaciones',
+    'internet y telefonia', 'internet y telefonía',
+    'plan de datos', 'renta mensual telefono',
+    'servicio de internet', 'fibra optica', 'fibra óptica',
+}
+
+PATRON_TELECOM: re.Pattern = re.compile(
+    '|'.join(re.escape(p) for p in PALABRAS_TELECOM), re.IGNORECASE)
+
 # ══════════════════════════════════════════════════════════════════
 # CACHE — evita re-evaluar conceptos repetidos (openpyxl motor)
 # ══════════════════════════════════════════════════════════════════
@@ -157,16 +174,17 @@ _cache_conceptos: dict = {}
 def detectar_tipo(concepto_lower: str) -> tuple:
     """
     Detecta tipo con cache. O(1) si ya fue evaluado.
-    Retorna: (es_gasolina, es_dulce, es_insumo)
+    Retorna: (es_gasolina, es_dulce, es_insumo, es_telecom)
     """
     if concepto_lower in _cache_conceptos:
         return _cache_conceptos[concepto_lower]
 
-    gas    = any(p in concepto_lower for p in PALABRAS_GASOLINA)
-    dulce  = any(p in concepto_lower for p in PALABRAS_DULCE)
-    insumo = any(p in concepto_lower for p in PALABRAS_INSUMO)
+    gas     = any(p in concepto_lower for p in PALABRAS_GASOLINA)
+    dulce   = any(p in concepto_lower for p in PALABRAS_DULCE)
+    insumo  = any(p in concepto_lower for p in PALABRAS_INSUMO)
+    telecom = any(p in concepto_lower for p in PALABRAS_TELECOM)
 
-    resultado = (gas, dulce, insumo)
+    resultado = (gas, dulce, insumo, telecom)
     _cache_conceptos[concepto_lower] = resultado
     return resultado
 
@@ -239,6 +257,11 @@ def formulas_auditables(rn: int, CL: dict) -> dict:
         # sub1_ieps8 = (subtotal - descuento) + IEPS8
         # El IEPS 8% forma parte de la base gravable
         'sub1_ieps8': f"=({CL['ST']}{rn}-{CL['DC']}{rn})+{CL.get('I8','')}{rn}",
+
+        # ── Fórmula 1c: SUB1 con IEPS 3% (telefonía/telecomunicaciones) ──
+        # sub1_ieps3 = (subtotal - descuento) + IEPS3
+        # El IEPS 3% forma parte de la base gravable igual que IEPS 8%
+        'sub1_ieps3': f"=({CL['ST']}{rn}-{CL['DC']}{rn})+{CL.get('I3','')}{rn}",
 
         # ── Fórmula 2: SUB0 — Total no gravado ────────────────────
         # sub0 = iva0 + iva_exento

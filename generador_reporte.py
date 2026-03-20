@@ -119,6 +119,7 @@ def leer_validado(path):
     i_ieps      = gc('ieps trasladado') or gc('ieps')
     i_ieps_nd   = gc('ieps trasladado no desglosado')
     i_ieps_g    = gc('ieps trasladado')
+    i_ieps3     = gc('ieps trasladado 3%')
     i_total     = gc('total')
     i_conceptos = gc('conceptos') or gc('descripcion')
     i_complem   = gc('complementos')
@@ -151,24 +152,26 @@ def leer_validado(path):
         total  = rnum(row, i_total)
         ieps_nd = rnum(row, i_ieps_nd)
         ieps_g  = rnum(row, i_ieps_g)
+        ieps3   = rnum(row, i_ieps3) if i_ieps3 is not None else 0.0
 
         # ── sub0: misma lógica que el motor, usando valores crudos ────
         # No leer la columna SUB0% (es fórmula Excel sin caché en Python)
         # Gasolina con IEPS: iva0 ya tiene el IEPS, iva_ex es el mismo valor
         # → sumarlos duplicaría. Solo usar iva0.
         ieps_activo = ieps_nd if ieps_nd > 0 else ieps_g
-        if ieps_activo > 0 and abs(iva0 - iva_ex) < 0.01 and abs(iva0 - ieps_activo) < 0.01:
-            # gasolina con IEPS — iva0 == iva_ex == ieps → no duplicar
+        # Gasolina con IEPS: motor copia IEPS a IVA_0% e IVA_Exento
+        # Si iva0 == iva_ex > 0 → no duplicar, usar solo iva0
+        if iva0 > 0 and abs(iva0 - iva_ex) < 0.02:
             sub0 = round(iva0, 2)
         else:
             sub0 = round(iva0 + iva_ex, 2)
 
-        # sub2: leer del _validado si está cacheado, sino recalcular
-        sub2_raw = rnum(row, i_sub2) if i_sub2 is not None else 0.0
-        if sub2_raw == 0.0 and (st - dc) > 0:
-            sub2 = round(max(st - dc - sub0, 0), 2)
-        else:
-            sub2 = round(sub2_raw, 2)
+        # SUB2: SIEMPRE calcular desde valores crudos del CFDI
+        # IEPS 3% telefonía se suma a SUB1 igual que IEPS 8% dulces
+        # Formula garantizada: SUB1 = SubTotal - Descuento + IEPS3
+        #                      SUB2 = SUB1 - SUB0
+        sub1 = round(st - dc + ieps3, 2)
+        sub2 = round(max(sub1 - sub0, 0), 2)
 
         uuid_rel_raw = safe_str(rv(row, i_uuid_rel))
         comentarios  = safe_str(rv(row, i_coment))
@@ -598,15 +601,15 @@ def generar_html(filas, ppd_pend, cp01_a_ppd, idx_razones, out, mes='', stats=No
 
         fc_cls = ' fc' if is_cp else ''
         buf.write(
-            '<tr class="fr %s%s" data-est="%s" data-rfc="%s">'
+            '<tr class="fr %s%s" data-est="%s" data-rfc="%s" data-uuid="%s">'
             '<td class="uu" title="%s">%s</td>'
             '<td class="uu" title="%s">%s</td>'
             '<td class="fd">%s</td>'
             '<td class="rz" title="%s">%s</td>'
-            '<td class="nm"><input type="number" class="ip" value="%s" step="0.01" onchange="rc(this)"></td>'
-            '<td class="nm"><input type="number" class="ip" value="%s" step="0.01" onchange="rc(this)"></td>'
-            '<td class="nm"><input type="number" class="ip" value="%s" step="0.01" onchange="rc(this)"></td>'
-            '<td class="tt"><b>%s</b></td>'
+            '<td class="nm"><input type="text" class="ip" value="%s" oninput="rc(this)"></td>'
+            '<td class="nm"><input type="text" class="ip" value="%s" oninput="rc(this)"></td>'
+            '<td class="nm"><input type="text" class="ip" value="%s" oninput="rc(this)"></td>'
+            '<td class="tt" title="SUB2 + IVA16 + SUB0 = TOTAL"><b class="tot-val">%s</b><span class="tot-formula"></span></td>'
             '<td class="mt">%s</td>'
             '<td class="mt">%s</td>'
             '<td class="mt">%s</td>'
@@ -615,6 +618,7 @@ def generar_html(filas, ppd_pend, cp01_a_ppd, idx_razones, out, mes='', stats=No
             '</tr>\n' % (
                 flt, fc_cls, flt,
                 f.get('rfc_em','').strip().upper(),
+                uuid_full,
                 uuid_full, uuid_disp,
                 f['uuid_rel'], rel_disp,
                 fecha_str,
@@ -732,6 +736,9 @@ table.dataTable tbody tr:hover { background:rgba(255,45,120,0.04) !important; }
 .nm  { text-align:right; }
 .tt  { font-weight:700; color:var(--am2); text-align:right;
        font-family:'JetBrains Mono',monospace; white-space:nowrap; }
+.tot-formula { display:block; font-size:8px; color:var(--ts);
+               font-weight:400; opacity:0.7; margin-top:2px;
+               font-family:'JetBrains Mono',monospace; }
 .mt  { font-size:10px; color:var(--ts); max-width:150px;
        white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .ec  { text-align:center; }
@@ -781,9 +788,26 @@ table.dataTable tbody tr:hover { background:rgba(255,45,120,0.04) !important; }
   font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ts); margin-top:12px; }
 .paginate_button {
   padding:4px 10px !important; border:1px solid var(--bo) !important;
-  border-radius:4px !important; margin:0 2px !important; }
+  border-radius:4px !important; margin:0 2px !important; cursor:pointer; }
 .paginate_button.current {
   background:var(--rs) !important; color:#fff !important; border-color:var(--rs) !important; }
+.paginate_button:hover:not(.current) {
+  background:rgba(255,45,120,0.08) !important; border-color:var(--rs) !important; }
+/* Filas de DataTables — respetar colores del reporte */
+table.dataTable { border-collapse: collapse; width:100%; font-size:12px; }
+table.dataTable thead th {
+  background:linear-gradient(180deg,#24242E,#1C1C26) !important;
+  color:var(--am) !important; padding:11px 8px; text-align:center;
+  font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.8px;
+  border-bottom:2px solid var(--rs) !important; white-space:nowrap;
+  border-top:none !important;
+}
+table.dataTable tbody td {
+  padding:9px 8px; border-bottom:1px solid var(--bo); vertical-align:middle;
+  background:inherit !important;
+}
+table.dataTable tbody tr { background:inherit !important; }
+table.dataTable tbody tr:hover td { background:rgba(255,45,120,0.04) !important; }
 
 
 /* ── DIOT ─────────────────────────────────────────────────────── */
@@ -845,22 +869,19 @@ footer { padding:28px 40px; border-top:1px solid var(--bo);
 let fa = 'todos';
 let dtable;
 
-// Clave única por reporte (basada en el título)
 const STORE_KEY = 'reaf_cambios_' + document.title.replace(/\s+/g,'_');
 
-/* ── Filtro por deducibilidad (data-est del <tr>) ─────────────── */
-$.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
-  if (fa === 'todos') return true;
-  const row = dtable.row(dataIndex).node();
-  const est = (row ? row.getAttribute('data-est') : '') || '';
-  if (fa === 'ded')         return est === 'ded' && !est.includes('efe');
-  if (fa === 'efe')         return est === 'efe';
-  if (fa === 'no-ded')      return est === 'no-ded';
-  if (fa === 'pendiente')   return est === 'pendiente';
-  if (fa === 'egreso')      return est === 'egreso';
-  if (fa === 'complemento') return est === 'complemento';
-  return true;
-});
+/* ── getUUID(): obtiene UUID del <tr> robusto con scrollX ─────── */
+function getUUID(tr) {
+  if (!tr) return '';
+  let uuid = tr.getAttribute('data-uuid') || '';
+  if (!uuid) {
+    const tdUu = tr.querySelector('td.uu[title]');
+    uuid = tdUu ? tdUu.getAttribute('title') : '';
+  }
+  if (!uuid && tr.cells[0]) uuid = tr.cells[0].getAttribute('title') || '';
+  return uuid.trim().toUpperCase();
+}
 
 /* ── localStorage: guardar / borrar / leer cambios ───────────── */
 function guardarCambio(uuid, estatus) {
@@ -882,33 +903,51 @@ function getCambios() {
   catch(e) { return {}; }
 }
 
-/* ── restaurarCambios(): aplica localStorage al cargar ──────────
-   FIX: itera sobre TODAS las filas con dtable.rows().nodes()
-        (dtable.rows().every() no ve filas en páginas no visibles)
-        Al terminar llama actualizarDiot() para que la DIOT refleje
-        los estatus restaurados desde el primer momento.
-   ─────────────────────────────────────────────────────────────── */
+/* ── guardarFila(): persiste sub2+iva+sub0+estatus ───────────── */
+function guardarFila(tr) {
+  try {
+    const uuid = getUUID(tr);
+    if (!uuid) return;
+    const inputs = tr.querySelectorAll('.ip');
+    const sel    = tr.querySelector('.se');
+    const s2  = inputs[0] ? inputs[0].value : '';
+    const iva = inputs[1] ? inputs[1].value : '';
+    const s0  = inputs[2] ? inputs[2].value : '';
+    const estatus = sel ? sel.value : '';
+    const data = JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
+    data[uuid] = { sub2: s2, iva: iva, sub0: s0, estatus: estatus };
+    localStorage.setItem(STORE_KEY, JSON.stringify(data));
+  } catch(e) { console.warn('localStorage error', e); }
+}
+
+/* ── restaurarCambios(): restaura sub2+iva+sub0+estatus al cargar */
 function restaurarCambios() {
   const cambios = getCambios();
   if (!Object.keys(cambios).length) return;
   $(dtable.rows().nodes()).each(function() {
     const tr   = this;
-    const uuid = (tr.cells[0] ? tr.cells[0].getAttribute('title') || '' : '').trim().toUpperCase();
-    if (!uuid) return;
-    const nuevoEst = cambios[uuid];
-    if (!nuevoEst) return;
+    const uuid = getUUID(tr);
+    if (!uuid || !cambios[uuid]) return;
+    const fila   = cambios[uuid];
+    const inputs = tr.querySelectorAll('.ip');
+    if (inputs.length >= 3) {
+      if (fila.sub2 !== undefined) inputs[0].value = fila.sub2;
+      if (fila.iva  !== undefined) inputs[1].value = fila.iva;
+      if (fila.sub0 !== undefined) inputs[2].value = fila.sub0;
+      recalcularTotal(tr,
+        parseFloat(inputs[0].value) || 0,
+        parseFloat(inputs[1].value) || 0,
+        parseFloat(inputs[2].value) || 0);
+    }
     const sel = tr.querySelector('.se');
-    if (!sel) return;
-    sel.value = nuevoEst;
-    ce(sel, false);  // false = no volver a guardar en localStorage
+    if (sel && fila.estatus) { sel.value = fila.estatus; ce(sel, false); }
   });
-  dtable.draw(false);    // redibujar sin resetear paginación
-  actualizarDiot();      // FIX: recalcular DIOT con los estatus restaurados
+  dtable.draw(false);
+  actualizarDiot();
+  actualizarContadores();
 }
 
-/* ── exportarCambiosCSV(): descarga cambios manuales como CSV ───
-   Útil para auditoría o para restaurar si el HTML se regenera.
-   ─────────────────────────────────────────────────────────────── */
+/* ── exportarCambiosCSV(): descarga cambios como CSV de respaldo ─ */
 function exportarCambiosCSV() {
   const cambios = getCambios();
   const keys = Object.keys(cambios);
@@ -991,6 +1030,8 @@ $(document).ready(function() {
     scrollX    : true,
     autoWidth  : true,
     order      : [[2, 'asc']],
+    stateSave  : true,
+    stateDuration: 0,
     language   : {
       search     : 'Buscar:',
       lengthMenu : 'Mostrar _MENU_',
@@ -1011,6 +1052,19 @@ $(document).ready(function() {
   });
 
   $('#bq-custom').on('keyup', function() { dtable.search(this.value).draw(); });
+
+  // Inicializar fórmulas visibles en todas las filas al cargar
+  dtable.rows().every(function() {
+    const tr  = this.node();
+    const ins = tr ? tr.querySelectorAll('.ip') : [];
+    if (ins.length >= 3) {
+      recalcularTotal(tr,
+        parseFloat(ins[0].value)||0,
+        parseFloat(ins[1].value)||0,
+        parseFloat(ins[2].value)||0
+      );
+    }
+  });
 
   restaurarCambios();
   actualizarContadores();
@@ -1123,6 +1177,32 @@ function limpiarCambios() {
   location.reload();
 }
 
+/* ── beforeunload: guardar todas las filas al cerrar/recargar ─── */
+window.addEventListener('beforeunload', function() {
+  try {
+    $(dtable.rows().nodes()).each(function() {
+      guardarFila(this);
+    });
+  } catch(e) {}
+});
+
+/* ── recalcularTotal(): SUB2 + IVA16 + SUB0 = TOTAL ─────────────── */
+function recalcularTotal(tr, s2, i16, s0) {
+  const total  = Math.round((s2 + i16 + s0) * 100) / 100;
+  const totVal = tr.querySelector('.tot-val');
+  const totFrm = tr.querySelector('.tot-formula');
+  if (totVal) {
+    totVal.textContent = '$' + total.toLocaleString('es-MX', {
+      minimumFractionDigits: 2, maximumFractionDigits: 2
+    });
+  }
+  if (totFrm) {
+    const fmt = v => v % 1 === 0 ? v.toFixed(0) : v.toFixed(2);
+    totFrm.textContent = (s2||i16||s0) ? fmt(s2)+' + '+fmt(i16)+' + '+fmt(s0) : '';
+  }
+  return total;
+}
+
 /* ── rc(): recalcular estatus al editar montos ────────────────── */
 function rc(inp) {
   const tr = inp.closest('tr');
@@ -1132,12 +1212,13 @@ function rc(inp) {
   const s2  = parseFloat(ins[0].value) || 0;
   const i16 = parseFloat(ins[1].value) || 0;
   const s0  = parseFloat(ins[2].value) || 0;
+  const tot = recalcularTotal(tr, s2, i16, s0);
+  guardarFila(tr);
   const sel = tr.querySelector('.se');
   if (!sel) return;
   const forma = (tr.cells[9]?.innerText  || '').trim();
   const uso   = (tr.cells[10]?.innerText || '').trim();
   const met   = (tr.cells[8]?.innerText  || '').trim();
-  const tot   = parseFloat((tr.cells[7]?.innerText || '0').replace(/[^0-9.]/g,'')) || 0;
   const fp = forma.substring(0,2);
   const uc = uso.substring(0,3).toUpperCase();
   const mc = met.substring(0,3).toUpperCase();
@@ -1168,7 +1249,6 @@ function rc(inp) {
         '<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue'
         '&family=DM+Sans:wght@300;400;500;700'
         '&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">\n'
-        '<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">\n'
         '<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>\n'
         '<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>\n'
         '<style>\n' + _CSS + '\n</style>\n'
