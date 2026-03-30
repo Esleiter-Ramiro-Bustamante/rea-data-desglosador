@@ -31,13 +31,6 @@ Solo ejecutas `main.py`. El programa mide tu RAM y el tamaño del archivo, elige
 | DIOT integrada | Informativa de Operaciones con Terceros — agrupada por RFC, actualización en tiempo real |
 | Complementos CP01 | Cruce por UUID directo o por RFC+total cuando el UUID relacionado viene vacío |
 | Forma 99 PPD | Se clasifica como PENDIENTE (no ERROR) — flujo correcto del SAT |
-| **IEPS 3% telefonía** | Telmex, Telcel, Izzi, Axtel, etc. detectados — `sub1_ieps3` en los 3 motores igual que IEPS 8% dulces |
-| **Fix motor chunks** | Motor chunks ahora incluye IEPS 3% completo — antes no tenía nada de esa columna |
-| **Fix reportes HTML/Excel** | Import `generador_reporteCORE` corregido a `generador_reporte` — los reportes ahora sí se generan |
-| **Dashboard: persistencia total** | `beforeunload` guarda antes de cerrar · `guardarFila` corregido · montos y estatus sobreviven al recargar |
-| **Dashboard: recálculo en tiempo real** | `oninput` reemplaza `onchange` — el total se actualiza mientras escribes |
-| **Dashboard: inputs limpios** | `type="text"` reemplaza `type="number"` — sin flechitas ni spinner |
-| **Dashboard: CSS propio** | CSS de DataTables CDN eliminado — colores por estatus ya no se pisan al redibujar |
 
 ---
 
@@ -50,8 +43,8 @@ pip install openpyxl pandas psutil
 # 2. Ejecutar
 python main.py
 
-# 3. Seleccionar carpeta y archivo cuando se solicite
-#    → El sistema elige el motor automáticamente
+# 3. El Asistente Gráfico de Sinergia REA (Tkinter) te guiará
+#    para seleccionar carpeta, archivo, mes, año y preferencias de log.
 
 # 4. Se generan 3 archivos:
 #    NOMBRE_validado.xlsx  → Facturas validadas con colores y fórmulas
@@ -63,10 +56,10 @@ python main.py
 |------|--------|
 | 1 | Instalar dependencias |
 | 2 | Ejecutar `python main.py` desde la terminal |
-| 3 | El programa analiza tu **RAM** y elige el mejor motor automáticamente |
-| 4 | Escribe el nombre del archivo **sin `.xlsx`** cuando se solicite |
-| 5 | Indica el mes del reporte (ej: `FEBRERO 2026`) |
-| 6 | Los 3 archivos de salida quedan en la misma carpeta del archivo fuente |
+| 3 | El programa analiza tu **RAM** y elige el motor automáticamente |
+| 4 | Usa el Asistente Gráfico para seleccionar tu carpeta y validado |
+| 5 | Selecciona el Mes y Año desde los menús desplegables |
+| 6 | Acepta (o no) ver el Log de Auditoría antes de finalizar |
 
 ---
 
@@ -152,8 +145,9 @@ Tabla resumen auditable con una fila por factura, columnas de estatus, montos de
 Dashboard interactivo con:
 - **Tarjetas de resumen** — DEDUCIBLES, EFECTIVO, NO DEDUCIBLES, PENDIENTES, TOTAL
 - **Filtros por estatus** — DED · EFE · NO DED · PEND · EGRESO · CP01
-- **Buscador en tiempo real** — por UUID, razón social o monto
-- **Estatus editable** — cambia cualquier clasificación directamente en el reporte
+- **Buscador y Numeración** — Búsqueda en tiempo real por UUID/Razón y columna de índice (`#`) correlativo
+- **Colores Integrados** — Desgloses monetarios con paleta Sinergia REA (Azul, Rosa, Verde)
+- **Estatus editable y Pegado Masivo** — Edita estatus o **pega datos desde Excel** (`Ctrl+V`) directamente
 - **Persistencia** — los cambios manuales se guardan con `localStorage` y sobreviven al recargar
 - **DIOT integrada** — se despliega al hacer clic en la tarjeta DEDUCIBLES
 
@@ -257,7 +251,7 @@ ReaDesF1.9/
 | v1.6 | Optimizaciones Nivel 1-3 | `iter_rows`, sets de palabras clave, cache, regex precompilado |
 | v1.7 | Adaptive Processing — 2 motores | Selección automática entre openpyxl y pandas |
 | v1.8 | 3 Motores + Vectorización + Chunks | Motor chunks para +30k filas, masks vectorizadas, fórmulas auditables |
-| **v1.9** ⭐ | **Reporte + Dashboard + DIOT** | `generador_reporte.py`, dashboard HTML interactivo, DIOT automática, fórmulas cacheadas, cruce CP01 por RFC+total |
+| **v1.9** ⭐ | **Reporte + Dashboard + DIOT** | Asistente Gráfico (Tkinter), Dashboard HTML (`#` index, `Ctrl+V` Excel, colores), DIOT auto |
 
 ---
 
@@ -272,17 +266,12 @@ ReaDesF1.9/
 - [x] Fix SUB0% gasolina con IEPS (no duplicar)
 - [x] Cruce CP01 ↔ PPD por RFC + total
 - [x] Forma 99 PPD → PENDIENTE (correcto SAT)
-- [x] IEPS 3% telefonía — Telmex, Telcel, Izzi, Axtel (los 3 motores)
-- [x] Fix import generador — reportes HTML y Excel siempre se generan
-- [x] Dashboard: persistencia total al recargar (montos + estatus)
-- [x] Dashboard: total se recalcula en tiempo real al escribir
-- [x] Dashboard: inputs sin flechitas de número
-- [x] Dashboard: CSS propio — colores no se pisan por DataTables
+- [x] Interfaz gráfica unificada con Tkinter en `main.py`
+- [x] Funciones avanzadas UI: columna index (`#`), colores corporativos, y pegado masivo desde Excel
 
 ### 🟡 Corto plazo — v2.0
 - [ ] `configuracion.py` externo — sin hardcodear rutas ni límites
 - [ ] `actualizador_ppd.py` — cruce automático entre meses (enero→febrero)
-- [ ] Interfaz gráfica tkinter
 - [ ] Pruebas automatizadas
 
 ### 🔵 Mediano plazo — v2.1

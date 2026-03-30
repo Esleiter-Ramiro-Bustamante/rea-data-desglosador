@@ -54,7 +54,8 @@ PALABRAS_GASOLINA: set = {
     'gasolina', 'combustible', 'magna', 'premium',
     'diesel', 'diésel', 'gasohol', 'gasoil',
     'nafta', 'petrol', 'gas', 'energético',
-    'turbosina', 'jet fuel', 'bunker'
+    'turbosina', 'jet fuel', 'bunker',
+    'regular', '32011', '32012', '34006'
 }
 
 PALABRAS_DULCE: set = {
@@ -179,10 +180,10 @@ def detectar_tipo(concepto_lower: str) -> tuple:
     if concepto_lower in _cache_conceptos:
         return _cache_conceptos[concepto_lower]
 
-    gas     = any(p in concepto_lower for p in PALABRAS_GASOLINA)
-    dulce   = any(p in concepto_lower for p in PALABRAS_DULCE)
-    insumo  = any(p in concepto_lower for p in PALABRAS_INSUMO)
-    telecom = any(p in concepto_lower for p in PALABRAS_TELECOM)
+    gas     = bool(PATRON_GASOLINA.search(concepto_lower))
+    dulce   = bool(PATRON_DULCE.search(concepto_lower))
+    insumo  = bool(PATRON_INSUMO.search(concepto_lower))
+    telecom = bool(PATRON_TELECOM.search(concepto_lower))
 
     resultado = (gas, dulce, insumo, telecom)
     _cache_conceptos[concepto_lower] = resultado

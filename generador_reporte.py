@@ -68,12 +68,11 @@ def extraer_uuids_de_texto(texto):
 def classify(estatus):
     """Retorna (bg_hex, fg_hex, css_cls, flt_cls). Un solo .upper() por fila."""
     eu = estatus.upper()
+    is_efe = 'EFE' in eu
     if 'COMPLEMENTO' in eu: return ('D5C6E0','4A0080','complemento','complemento')
-    if '16 Y 0'      in eu: return ('BDD7EE','1F497D','mix','ded')
-    if '16%'         in eu:
-        return ('C6EFCE','1B5E20','ded16','efe' if 'EFE' in eu else 'ded')
-    if '0%'          in eu:
-        return ('FFF3CD','856404','ded0','efe' if 'EFE' in eu else 'ded')
+    if '16 Y 0'      in eu: return ('BDD7EE','1F497D','mix',  'efe160' if is_efe else 'ded160')
+    if '16%'         in eu: return ('C6EFCE','1B5E20','ded16','efe16' if is_efe else 'ded16')
+    if '0%'          in eu: return ('FFF3CD','856404','ded0', 'efe0' if is_efe else 'ded0')
     if 'EGRESO'      in eu: return ('E2CFED','6A1B9A','egreso','egreso')
     if 'PENDIENTE'   in eu: return ('E0E0E0','37474F','pendiente','pendiente')
     if 'ERROR'       in eu: return ('FF4444','FFFFFF','no-ded','no-ded')
@@ -539,7 +538,8 @@ def generar_excel(filas, ppd_pend, cp01_a_ppd, idx_razones, out, mes='', reg_cod
 
 _OPCIONES = [
     'DED 16%','DED 0%','DED 16 Y 0%','EFE 16%','EFE 0%','EFE 16 Y 0%',
-    'EGRESO','NO DEDUCIBLE','NO DEDUCIBLE: Efectivo >= $2,000','PENDIENTE','COMPLEMENTO'
+    'EGRESO','NO DEDUCIBLE','NO DEDUCIBLE: Efectivo >= $2,000','PENDIENTE','COMPLEMENTO',
+    'OTRO MES', 'MES ANTERIOR'
 ]
 
 def generar_html(filas, ppd_pend, cp01_a_ppd, idx_razones, out, mes='', stats=None, reg_cod='612', reg_nombre=''):
@@ -553,7 +553,7 @@ def generar_html(filas, ppd_pend, cp01_a_ppd, idx_razones, out, mes='', stats=No
     m_ded=s.get('monto_ded',0); m_no_ded=s.get('monto_no_ded',0); m_pend=s.get('monto_pend',0)
 
     buf = StringIO()
-    for f in filas:
+    for i, f in enumerate(filas, 1):
         is_cp   = es_complemento(f)
         estatus = calc_estatus(f, is_cp, ppd_pend, idx_razones)
         bg, fg, css, flt = classify(estatus)
@@ -572,9 +572,7 @@ def generar_html(filas, ppd_pend, cp01_a_ppd, idx_razones, out, mes='', stats=No
         if is_cp:
             display, razon = resolver_uuid_rel(f, idx_razones, cp01_a_ppd)
             saldo = f.get('total', 0)
-            # UUID REL → mostrar los 12 chars del PPD relacionado
             rel_disp = display if display else '–'
-            # OBS: "Complemento parcialidad 1 – 5D1EDA96AB6E saldo insoluto $X"
             if display:
                 obs_txt = 'Complemento parcialidad 1 - factura %s' % display
                 if razon: obs_txt += ' (%s)' % razon[:30]
@@ -593,22 +591,29 @@ def generar_html(filas, ppd_pend, cp01_a_ppd, idx_razones, out, mes='', stats=No
 
         fecha_raw = f['fecha']
         try:
-            fecha_str = (fecha_raw.strftime('%Y-%m-%d %H:%M')
-                         if hasattr(fecha_raw,'strftime')
-                         else str(fecha_raw or '').split('.')[0][:16])
+            if hasattr(fecha_raw, 'strftime'):
+                fecha_str = fecha_raw.strftime('%d/%m/%Y')
+            else:
+                s = str(fecha_raw or '').split(' ')[0]
+                if '-' in s:
+                    p = s.split('-')
+                    fecha_str = f"{p[2]}/{p[1]}/{p[0]}" if len(p)==3 else s
+                else:
+                    fecha_str = s[:10]
         except Exception:
-            fecha_str = str(fecha_raw or '')
+            fecha_str = str(fecha_raw or '')[:10]
 
         fc_cls = ' fc' if is_cp else ''
         buf.write(
             '<tr class="fr %s%s" data-est="%s" data-rfc="%s" data-uuid="%s">'
+            '<td class="nx">%s</td>'
             '<td class="uu" title="%s">%s</td>'
             '<td class="uu" title="%s">%s</td>'
             '<td class="fd">%s</td>'
             '<td class="rz" title="%s">%s</td>'
-            '<td class="nm"><input type="text" class="ip" value="%s" oninput="rc(this)"></td>'
-            '<td class="nm"><input type="text" class="ip" value="%s" oninput="rc(this)"></td>'
-            '<td class="nm"><input type="text" class="ip" value="%s" oninput="rc(this)"></td>'
+            '<td class="nm"><input type="text" class="ip" style="color:var(--az)" value="%s" oninput="rc(this)"></td>'
+            '<td class="nm"><input type="text" class="ip" style="color:var(--rs)" value="%s" oninput="rc(this)"></td>'
+            '<td class="nm"><input type="text" class="ip" style="color:var(--vr)" value="%s" oninput="rc(this)"></td>'
             '<td class="tt" title="SUB2 + IVA16 + SUB0 = TOTAL"><b class="tot-val">%s</b><span class="tot-formula"></span></td>'
             '<td class="mt">%s</td>'
             '<td class="mt">%s</td>'
@@ -619,6 +624,7 @@ def generar_html(filas, ppd_pend, cp01_a_ppd, idx_razones, out, mes='', stats=No
                 flt, fc_cls, flt,
                 f.get('rfc_em','').strip().upper(),
                 uuid_full,
+                i,
                 uuid_full, uuid_disp,
                 f['uuid_rel'], rel_disp,
                 fecha_str,
@@ -669,7 +675,8 @@ body { background:var(--fo); color:var(--tx); font-family:'DM Sans',sans-serif; 
 .cs { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
       gap:14px; padding:22px 40px; }
 .cd { background:var(--ca); border-radius:10px; padding:16px 18px;
-      border-left:4px solid transparent; box-shadow:0 2px 10px rgba(0,0,0,0.07); }
+      border-left:4px solid transparent; box-shadow:0 2px 10px rgba(0,0,0,0.07); position:relative; overflow:hidden; }
+.cd-ico { position:absolute; top:-5px; right:-10px; font-size:65px; opacity:0.06; line-height:1; pointer-events:none; }
 .cd1 { border-color:var(--vr); }  .cd2 { border-color:var(--rj); }
 .cd3 { border-color:#999; }       .cd4 { border-color:var(--am); }
 .cd5 { border-color:#E68A00; }
@@ -702,6 +709,8 @@ body { background:var(--fo); color:var(--tx); font-family:'DM Sans',sans-serif; 
 .bf:hover { border-color:var(--rs); color:var(--rs); }
 .bf.ac    { background:var(--rs); border-color:var(--rs); color:#fff; }
 .bdd.ac   { background:var(--vr);  border-color:var(--vr);  color:#fff; }
+.bdo.ac   { background:var(--am);  border-color:var(--am);  color:#fff; }
+.bmix.ac  { background:var(--az);  border-color:var(--az);  color:#fff; }
 .bno.ac   { background:var(--rj);  border-color:var(--rj);  color:#fff; }
 .bpp.ac   { background:#666;       border-color:#666;        color:#fff; }
 .bef.ac   { background:#E68A00;    border-color:#E68A00;     color:#fff; }
@@ -730,19 +739,20 @@ table.dataTable tbody tr:nth-child(even) { background:var(--fa); }
 table.dataTable tbody tr:hover { background:rgba(255,45,120,0.04) !important; }
 
 /* ── Celdas específicas ───────────────────────────────────────── */
-.uu  { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--ts); word-break:break-all; }
-.fd  { font-size:11px; color:var(--ts); white-space:nowrap; text-align:center; }
-.rz  { font-size:11px; }
+.nx  { text-align:center; font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:var(--tx); border-right:1px solid var(--bo); background:var(--ca); }
+.uu  { font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:var(--tx); word-break:break-all; }
+.fd  { font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:var(--tx); white-space:nowrap; text-align:center; }
+.rz  { font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:var(--tx); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:140px; }
 .nm  { text-align:right; }
 .tt  { font-weight:700; color:var(--am2); text-align:right;
        font-family:'JetBrains Mono',monospace; white-space:nowrap; }
 .tot-formula { display:block; font-size:8px; color:var(--ts);
                font-weight:400; opacity:0.7; margin-top:2px;
                font-family:'JetBrains Mono',monospace; }
-.mt  { font-size:10px; color:var(--ts); max-width:150px;
+.mt  { font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:var(--tx); max-width:150px;
        white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.ec  { text-align:center; }
-.ob  { font-size:10px; max-width:320px; }
+.ec  { font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:var(--tx); text-align:center; }
+.ob  { font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:var(--tx); max-width:320px; }
 
 /* ── Input editable de montos ─────────────────────────────────── */
 .ip { background:transparent; border:1px solid transparent; color:var(--tx);
@@ -861,6 +871,26 @@ footer { padding:28px 40px; border-top:1px solid var(--bo);
 .fl2 .f  { color:var(--am); }
 .fi      { font-family:'JetBrains Mono',monospace; font-size:10px; color:#8E8E9A;
            text-align:right; line-height:1.9; opacity:.65; }
+
+/* ── Extras (Nomina & Depreciacion) y Estatus Nuevos ──────────── */
+.se.otro-mes  { background:#E8EAF6; color:#283593; }
+.se.mes-ant   { background:#CFD8DC; color:#263238; }
+
+.ext-wrap { padding:0 40px 40px; display:flex; flex-direction:column; gap:24px; }
+.ext-card { background:var(--ca); border-radius:10px; padding:24px; box-shadow:0 4px 16px rgba(0,0,0,0.06); border-top:4px solid var(--rs); }
+.ext-card.depr { border-top-color:var(--az); }
+.ext-tt { font-family:'Bebas Neue',sans-serif; font-size:24px; color:var(--tx); margin-bottom:16px; letter-spacing:1px; }
+.ext-tbl-wrap { overflow-x:auto; }
+.ext-tbl { width:100%; border-collapse:collapse; min-width:1100px; }
+.ext-tbl th { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--ts); border-bottom:1px solid var(--bo); padding:8px; text-align:left; white-space:nowrap; }
+.ext-tbl td { border-bottom:1px solid var(--bo); padding:8px; }
+.ext-ip { border:none; outline:none; font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:var(--tx); background:transparent; width:100%; }
+.ext-ip:focus { border-bottom:1px solid rgba(255,255,255,0.2); }
+.ext-btn { margin-top:16px; background:rgba(255,45,120,0.1); color:var(--rs); border:none; padding:8px 16px; border-radius:4px; font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; cursor:pointer; transition:all .2s;}
+.ext-btn:hover { background:var(--rs); color:#fff; }
+.ext-del { background:none; border:none; color:var(--rj); cursor:pointer; font-weight:bold; font-size:16px; opacity:0.6; padding:0 4px; border-radius:4px;}
+.ext-del:hover { background:rgba(255,0,0,0.1); opacity:1; }
+.ext-tot-row td { padding:12px 8px; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:12px; color:var(--tx); border-top:2px solid var(--bo); }
 """
 
     # ── JavaScript ──────────────────────────────────────────────────
@@ -945,6 +975,7 @@ function restaurarCambios() {
   dtable.draw(false);
   actualizarDiot();
   actualizarContadores();
+  loadExt();
 }
 
 /* ── exportarCambiosCSV(): descarga cambios como CSV de respaldo ─ */
@@ -972,15 +1003,15 @@ function actualizarDiot() {
   const provs = {};
   $(dtable.rows().nodes()).each(function() {
     const est = this.getAttribute('data-est') || '';
-    if (est !== 'ded' && est !== 'efe') return;
+    if (!est.startsWith('ded') && !est.startsWith('efe')) return;
     const cells = this.cells;
-    const razon = cells[3] ? cells[3].innerText.trim() : '';
+    const razon = cells[4] ? cells[4].innerText.trim() : '';
     const rfc   = this.getAttribute('data-rfc') || '';
     if (!rfc) return;
-    const s2  = parseFloat((cells[4]?.querySelector('input')?.value) || 0) || 0;
-    const i16 = parseFloat((cells[5]?.querySelector('input')?.value) || 0) || 0;
-    const s0  = parseFloat((cells[6]?.querySelector('input')?.value) || 0) || 0;
-    const tot = parseFloat(((cells[7]?.innerText || '0').replace(/[^0-9.]/g,''))) || 0;
+    const s2  = parseFloat((cells[5]?.querySelector('input')?.value) || 0) || 0;
+    const i16 = parseFloat((cells[6]?.querySelector('input')?.value) || 0) || 0;
+    const s0  = parseFloat((cells[7]?.querySelector('input')?.value) || 0) || 0;
+    const tot = parseFloat(((cells[8]?.innerText || '0').replace(/[^0-9.]/g,''))) || 0;
     if (!provs[rfc]) provs[rfc] = { razon, rfc, s2:0, i16:0, s0:0, tot:0 };
     provs[rfc].s2  += s2;  provs[rfc].i16 += i16;
     provs[rfc].s0  += s0;  provs[rfc].tot += tot;
@@ -1012,8 +1043,10 @@ $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
   if (fa === 'todos') return true;
   const row = dtable.row(dataIndex).node();
   const est = (row ? row.getAttribute('data-est') : '') || '';
-  if (fa === 'ded')         return est === 'ded';
-  if (fa === 'efe')         return est === 'efe';
+  if (fa === 'ded16')       return est === 'ded16' || est === 'ded';
+  if (fa === 'ded0')        return est === 'ded0';
+  if (fa === 'ded160')      return est === 'ded160';
+  if (fa === 'efe')         return est.startsWith('efe');
   if (fa === 'no-ded')      return est === 'no-ded';
   if (fa === 'pendiente')   return est === 'pendiente';
   if (fa === 'egreso')      return est === 'egreso';
@@ -1029,7 +1062,7 @@ $(document).ready(function() {
     deferRender: true,
     scrollX    : true,
     autoWidth  : true,
-    order      : [[2, 'asc']],
+    order      : [[3, 'asc']],
     stateSave  : true,
     stateDuration: 0,
     language   : {
@@ -1040,14 +1073,15 @@ $(document).ready(function() {
       zeroRecords: 'Sin resultados'
     },
     columnDefs: [
-      { targets: [0, 1],     width: '160px' },
-      { targets: [2],        width: '100px' },
-      { targets: [3],        width: '160px' },
-      { targets: [4, 5, 6],  width: '80px'  },
-      { targets: [7],        width: '90px'  },
-      { targets: [8, 9, 10], width: '140px' },
-      { targets: [11],       width: '140px' },
-      { targets: [12],       width: '220px' }
+      { targets: [0],        width: '25px'  },
+      { targets: [1, 2],     width: '160px' },
+      { targets: [3],        width: '100px' },
+      { targets: [4],        width: '160px' },
+      { targets: [5, 6, 7],  width: '80px'  },
+      { targets: [8],        width: '90px'  },
+      { targets: [9, 10, 11],width: '140px' },
+      { targets: [12],       width: '140px' },
+      { targets: [13],       width: '220px' }
     ]
   });
 
@@ -1082,39 +1116,59 @@ function toggleDiot(card) {
 
 /* ── actualizarContadores(): recuenta data-est en TODAS las filas */
 function actualizarContadores() {
-  let ded=0, efe=0, nod=0, pen=0, eg=0, cp=0, tot=0;
-  let mDed=0, mNod=0, mPen=0;
+  let cnt16=0, cnt0=0, cnt160=0, e16=0, e0=0, e160=0, nod=0, pen=0, eg=0, cp=0, tom=0, tma=0, tot=0;
+  let m16=0, m0=0, mNod=0, mPen=0;
   $(dtable.rows().nodes()).each(function() {
     const est  = this.getAttribute('data-est') || '';
-    const tots = parseFloat(
-      ($(this).find('td:eq(7)').text() || '0').replace(/[^0-9.]/g,'')
-    ) || 0;
+    const s2   = parseFloat(String($(this).find('.ip').eq(0).val()).replace(/[^0-9.-]/g, '')) || 0;
+    const i16  = parseFloat(String($(this).find('.ip').eq(1).val()).replace(/[^0-9.-]/g, '')) || 0;
+    const s0   = parseFloat(String($(this).find('.ip').eq(2).val()).replace(/[^0-9.-]/g, '')) || 0;
+    const tds  = $(this).find('td:eq(8)').text() || '0';
+    const tots = parseFloat(tds.replace(/[^0-9.-]/g,'')) || 0;
     tot++;
-    if      (est==='ded')         { ded++; mDed+=tots; }
-    else if (est==='efe')         { efe++; mDed+=tots; }
-    else if (est==='no-ded')      { nod++; mNod+=tots; }
-    else if (est==='pendiente')   { pen++; mPen+=tots; }
-    else if (est==='egreso')      { eg++;  }
-    else if (est==='complemento') { cp++;  }
+    
+    if      (est === 'ded16' || est === 'ded') { cnt16++; m16 += (s2 + i16); }
+    else if (est === 'ded0')                   { cnt0++;  m0  += s0; }
+    else if (est === 'ded160')                 { cnt160++; m16 += (s2 + i16); m0 += s0; }
+    else if (est === 'efe16')                  { e16++;   m16 += (s2 + i16); }
+    else if (est === 'efe0')                   { e0++;    m0  += s0; }
+    else if (est === 'efe160')                 { e160++;  m16 += (s2 + i16); m0 += s0; }
+    else if (est === 'no-ded')                 { nod++;   mNod += tots; }
+    else if (est === 'pendiente')              { pen++;   mPen += tots; }
+    else if (est === 'egreso')                 { eg++; }
+    else if (est === 'complemento')            { cp++; }
+    else if (est === 'otro-mes')               { tom++; }
+    else if (est === 'mes-ant')                { tma++; }
   });
+
   const bf = document.querySelectorAll('.fls .bf');
   if (bf[0]) bf[0].textContent = 'TODOS (' +tot+ ')';
-  if (bf[1]) bf[1].textContent = 'DED ('   +ded+ ')';
-  if (bf[2]) bf[2].textContent = 'EFE ('   +efe+ ')';
-  if (bf[3]) bf[3].textContent = 'NO DED ('+nod+ ')';
-  if (bf[4]) bf[4].textContent = 'PEND ('  +pen+ ')';
-  if (bf[5]) bf[5].textContent = 'EGRESO ('+eg+  ')';
-  if (bf[6]) bf[6].textContent = 'CP01 ('  +cp+  ')';
+  if (bf[1]) bf[1].textContent = 'DED 16% (' +cnt16+ ')';
+  if (bf[2]) bf[2].textContent = 'DED 0% (' +cnt0+ ')';
+  if (bf[3]) bf[3].textContent = '16 Y 0% (' +cnt160+ ')';
+  if (bf[4]) bf[4].textContent = 'EFE (' +(e16+e0+e160)+ ')';
+  if (bf[5]) bf[5].textContent = 'NO DED (' +nod+ ')';
+  if (bf[6]) bf[6].textContent = 'PEND ('  +pen+ ')';
+  if (bf[7]) bf[7].textContent = 'EGRESO ('+eg+  ')';
+  if (bf[8]) bf[8].textContent = 'CP01 ('  +cp+  ')';
+  
   const fmt = v => '$'+v.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
   const el  = id => document.getElementById(id);
-  if (el('cnt-ded')) el('cnt-ded').textContent = ded+efe;
-  if (el('cnt-efe')) el('cnt-efe').textContent = efe;
+  
+  if (el('cnt-tot16')) el('cnt-tot16').textContent = (cnt16 + cnt160 + e16 + e160);
+  if (el('mnt-tot16')) el('mnt-tot16').textContent = fmt(m16);
+  if (el('cnt-tot0'))  el('cnt-tot0').textContent  = (cnt0 + cnt160 + e0 + e160);
+  if (el('mnt-tot0'))  el('mnt-tot0').textContent  = fmt(m0);
+  if (el('cnt-juntos')) el('cnt-juntos').textContent = (cnt16 + cnt160 + e16 + e160 + cnt0 + e0);
+  if (el('mnt-juntos')) el('mnt-juntos').textContent = fmt(m16 + m0);
+  if (el('cnt-nod'))   el('cnt-nod').textContent   = nod;
+  
+  if (el('cnt-efe')) el('cnt-efe').textContent = (e16 + e0 + e160);
   if (el('cnt-nod')) el('cnt-nod').textContent = nod;
-  if (el('cnt-pen')) el('cnt-pen').textContent = pen;
-  if (el('cnt-tot')) el('cnt-tot').textContent = tot;
-  if (el('mnt-ded')) el('mnt-ded').textContent = fmt(mDed);
   if (el('mnt-nod')) el('mnt-nod').textContent = fmt(mNod);
+  if (el('cnt-pen')) el('cnt-pen').textContent = pen;
   if (el('mnt-pen')) el('mnt-pen').textContent = fmt(mPen);
+  if (el('cnt-tot')) el('cnt-tot').textContent = tot;
   actualizarDiot();
 }
 
@@ -1138,6 +1192,8 @@ function ce(sel, guardar = true) {
 
   if      (v.includes('COMPLE'))                        sel.classList.add('complemento');
   else if (v.includes('PEND'))                          sel.classList.add('pendiente');
+  else if (v.includes('OTRO MES'))                      sel.classList.add('otro-mes');
+  else if (v.includes('MES ANTER'))                     sel.classList.add('mes-ant');
   else if (v.includes('NO DED') || v.includes('ERROR')) sel.classList.add('no-ded');
   else if (v.includes('EGRESO'))                        sel.classList.add('egreso');
   else if (v.includes('16 Y 0'))                        sel.classList.add('mix');
@@ -1153,14 +1209,19 @@ function ce(sel, guardar = true) {
     let est = 'no-ded';
     if      (v.includes('COMPLE'))                        est = 'complemento';
     else if (v.includes('PEND'))                          est = 'pendiente';
+    else if (v.includes('OTRO MES'))                      est = 'otro-mes';
+    else if (v.includes('MES ANTER'))                     est = 'mes-ant';
     else if (v.includes('NO DED') || v.includes('ERROR')) est = 'no-ded';
     else if (v.includes('EGRESO'))                        est = 'egreso';
-    else if (v.includes('EFE'))                           est = 'efe';
-    else if (v.includes('DED'))                           est = 'ded';
+    else if (v.includes('EFE') && v.includes('0%'))       est = 'efe0';
+    else if (v.includes('EFE'))                           est = 'efe16';
+    else if (v.includes('16 Y 0'))                        est = 'ded160';
+    else if (v.includes('0%'))                            est = 'ded0';
+    else if (v.includes('DED'))                           est = 'ded16';
     tr.setAttribute('data-est', est);
 
     if (guardar) {
-      const uuid = (tr.cells[0] ? tr.cells[0].getAttribute('title') || '' : '').trim().toUpperCase();
+      const uuid = (tr.cells[1] ? tr.cells[1].getAttribute('title') || '' : '').trim().toUpperCase();
       if (uuid) {
         if (v !== o) guardarCambio(uuid, v);
         else         borrarCambio(uuid);
@@ -1235,6 +1296,204 @@ function rc(inp) {
   sel.value = (fp==='01' ? 'EFE ' : 'DED ') + suf;
   ce(sel);
 }
+
+/* ── Extras Módulos (Nómina y Depreciación) ───────────────────── */
+function addExtRow(tid) {
+  const tbl = document.getElementById(tid);
+  if (!tbl) return;
+  const tbody = tbl.querySelector('tbody');
+  const row = tbody.rows[0].cloneNode(true);
+  row.querySelectorAll('.ext-ip').forEach(inp => inp.value = '');
+  tbody.appendChild(row);
+  bindExtEvents();
+  saveExt();
+}
+
+function delExtRow(btn, tid) {
+  const tbody = document.getElementById(tid).querySelector('tbody');
+  if (tbody.rows.length > 1) {
+    btn.closest('tr').remove();
+    saveExt();
+  } else {
+    btn.closest('tr').querySelectorAll('.ext-ip').forEach(inp => inp.value = '');
+    saveExt();
+  }
+}
+
+function bindExtEvents() {
+  document.querySelectorAll('.ext-ip').forEach(inp => {
+    inp.removeEventListener('input', saveExt);
+    inp.addEventListener('input', saveExt);
+  });
+}
+
+function calcExtTotals() {
+  const fmt = v => '$'+v.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  // Nomina
+  let nSueldo=0, nIsr=0, nImss=0, nTot=0;
+  document.querySelectorAll('#tbl-nom tbody tr').forEach(tr => {
+    const ips = tr.querySelectorAll('.num-nom');
+    if(ips.length >= 4) {
+      nSueldo += parseFloat(ips[0].value.replace(/[^0-9.-]/g,'')) || 0;
+      nIsr    += parseFloat(ips[1].value.replace(/[^0-9.-]/g,'')) || 0;
+      nImss   += parseFloat(ips[2].value.replace(/[^0-9.-]/g,'')) || 0;
+      nTot    += parseFloat(ips[3].value.replace(/[^0-9.-]/g,'')) || 0;
+    }
+  });
+  if(document.getElementById('tot-nom-sueldo')) document.getElementById('tot-nom-sueldo').textContent = fmt(nSueldo);
+  if(document.getElementById('tot-nom-isr')) document.getElementById('tot-nom-isr').textContent = fmt(nIsr);
+  if(document.getElementById('tot-nom-imss')) document.getElementById('tot-nom-imss').textContent = fmt(nImss);
+  if(document.getElementById('tot-nom-total')) document.getElementById('tot-nom-total').textContent = fmt(nTot);
+
+  // Depreciacion
+  let dTot=0;
+  document.querySelectorAll('#tbl-dep tbody tr').forEach(tr => {
+    const ips = tr.querySelectorAll('.num-dep');
+    if(ips.length >= 1) {
+      dTot  += parseFloat(ips[0].value.replace(/[^0-9.-]/g,'')) || 0;
+    }
+  });
+  if(document.getElementById('tot-dep-total')) document.getElementById('tot-dep-total').textContent = fmt(dTot);
+}
+
+let pasteHistory = [];
+document.addEventListener('keydown', function(e) {
+  if (e.ctrlKey && e.key === 'z' && pasteHistory.length > 0) {
+    const isIp = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
+    if (!isIp) { // Si no estamos escribiendo en un input manualmente
+      e.preventDefault();
+      const lastState = pasteHistory.pop();
+      lastState.forEach(item => {
+        if (item.el) {
+          item.el.value = item.oldVal;
+          item.el.dispatchEvent(new Event('input', { bubbles: true }));
+          item.el.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      });
+    }
+  }
+});
+
+document.addEventListener('paste', function(e) {
+  const target = e.target;
+  const isExtTbl = target.closest('.ext-tbl');
+  const isMainTbl = target.closest('#tbl');
+  if (!isExtTbl && !isMainTbl) return;
+  if (target.tagName !== 'INPUT' && target.tagName !== 'SELECT') return;
+
+  const clipboardData = e.clipboardData || window.clipboardData;
+  const pastedData = clipboardData.getData('Text');
+  if (!pastedData) return;
+
+  const rows = pastedData.replace(/\r/g, '').split('\n').map(r => r.split('\t'));
+  if (rows.length <= 1 && rows[0].length <= 1) return;
+
+  e.preventDefault();
+  const tbody = target.closest('tbody');
+  const tr = target.closest('tr');
+  const td = target.closest('td');
+  if (!tbody || !tr || !td) return;
+
+  const startRowIdx = Array.from(tbody.children).indexOf(tr);
+  const startColIdx = Array.from(tr.children).indexOf(td);
+  
+  let tblType = 'main';
+  if (tbody.id === 'tbody-nom' || (isExtTbl && isExtTbl.id === 'tbl-nom')) tblType = 'nom';
+  else if (tbody.id === 'tbody-dep' || (isExtTbl && isExtTbl.id === 'tbl-dep')) tblType = 'dep';
+
+  const historyItem = [];
+
+  rows.forEach((rowCells, rOffset) => {
+    if (rowCells.length === 1 && rowCells[0].trim() === '') return;
+    
+    if (tblType === 'nom' && rowCells.length >= 11 && rowCells[7].trim() === '' && rowCells[8].trim() === '') {
+        rowCells.splice(7, 2);
+    }
+    
+    let targetRow = tbody.children[startRowIdx + rOffset];
+    if (!targetRow) {
+      if (tblType === 'main') return;
+      const clone = tbody.rows[0].cloneNode(true);
+      clone.querySelectorAll('input, select').forEach(inp => inp.value = '');
+      clone.querySelectorAll('.ext-sum, .ext-tot').forEach(inp => inp.textContent = '$0.00');
+      tbody.appendChild(clone);
+      targetRow = clone;
+    }
+
+    rowCells.forEach((cellData, cOffset) => {
+      const targetTd = targetRow.children[startColIdx + cOffset];
+      if (!targetTd || targetTd.classList.contains('ext-sum') || targetTd.classList.contains('ext-tot') || targetTd.classList.contains('ext-act')) return;
+      let input = targetTd.querySelector('input, select');
+      if (input) {
+        historyItem.push({ el: input, oldVal: input.value });
+        let val = cellData.trim();
+        if (input.tagName === 'INPUT') {
+            val = val.replace(/[^0-9A-Za-z. ,\/ñÑáéíóúÁÉÍÓÚ-]/g, '');
+        }
+        input.value = val;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+  });
+  if (historyItem.length > 0) pasteHistory.push(historyItem);
+});
+
+
+function saveExt() {
+  calcExtTotals();
+  const data = { nom: [], dep: [] };
+  const tblNom = document.getElementById('tbl-nom');
+  const tblDep = document.getElementById('tbl-dep');
+  
+  if (tblNom) {
+    const rows = tblNom.querySelector('tbody').rows;
+    for(let i=0; i<rows.length; i++) {
+      const vals = Array.from(rows[i].querySelectorAll('.ext-ip')).map(x => x.value);
+      if(vals.join('').trim() !== '') data.nom.push(vals);
+    }
+  }
+  if (tblDep) {
+    const rows = tblDep.querySelector('tbody').rows;
+    for(let i=0; i<rows.length; i++) {
+      const vals = Array.from(rows[i].querySelectorAll('.ext-ip')).map(x => x.value);
+      if(vals.join('').trim() !== '') data.dep.push(vals);
+    }
+  }
+  try { localStorage.setItem(STORE_KEY + '_ext', JSON.stringify(data)); } catch(e){}
+}
+
+function loadExt() {
+  try {
+    const data = JSON.parse(localStorage.getItem(STORE_KEY + '_ext'));
+    if(!data) { calcExtTotals(); return; }
+    
+    const tblNom = document.getElementById('tbl-nom');
+    if(data.nom && data.nom.length > 0 && tblNom) {
+      const tbody = tblNom.querySelector('tbody');
+      while(tbody.rows.length < data.nom.length) {
+        tbody.appendChild(tbody.rows[0].cloneNode(true));
+      }
+      data.nom.forEach((vals, i) => {
+        const inps = tbody.rows[i].querySelectorAll('.ext-ip');
+        vals.forEach((v, j) => { if(inps[j]) inps[j].value = v; });
+      });
+    }
+    const tblDep = document.getElementById('tbl-dep');
+    if(data.dep && data.dep.length > 0 && tblDep) {
+      const tbody = tblDep.querySelector('tbody');
+      while(tbody.rows.length < data.dep.length) {
+        tbody.appendChild(tbody.rows[0].cloneNode(true));
+      }
+      data.dep.forEach((vals, i) => {
+        const inps = tbody.rows[i].querySelectorAll('.ext-ip');
+        vals.forEach((v, j) => { if(inps[j]) inps[j].value = v; });
+      });
+    }
+  } catch(e) {}
+  bindExtEvents();
+  calcExtTotals();
+}
 """
 
     # ── Ensamblado final del HTML ───────────────────────────────────
@@ -1267,18 +1526,62 @@ function rc(inp) {
         '<span class="pv">PUE</span>'
         '<span class="pv">01, 02, 03, 28</span>'
         '<span class="pv">G01 Y G03</span></div>\n'
-        '<div class="cs">\n'
-        '  <div class="cd cd1 cd-click" onclick="toggleDiot(this)" title="Ver DIOT">'
-        '<div class="cl">DEDUCIBLES <span class="diot-ico">— DIOT</span></div>'
-        '<div class="cn" id="cnt-ded">{nd}</div><div class="cm" id="mnt-ded">${md}</div></div>\n'
-        '  <div class="cd cd5"><div class="cl">EFECTIVO</div>'
-        '<div class="cn" id="cnt-efe">{ne}</div></div>\n'
-        '  <div class="cd cd2"><div class="cl">NO DEDUCIBLES</div>'
-        '<div class="cn" id="cnt-nod">{nn}</div><div class="cm" id="mnt-nod">${mn}</div></div>\n'
-        '  <div class="cd cd3"><div class="cl">PENDIENTES</div>'
-        '<div class="cn" id="cnt-pen">{np}</div><div class="cm" id="mnt-pen">${mp}</div></div>\n'
-        '  <div class="cd cd4"><div class="cl">TOTAL FACTURAS</div>'
-        '<div class="cn" id="cnt-tot">{tf}</div></div>\n'
+        '<div class="row gx-2 mb-3">\n'
+        '  <div class="col-xl-3 col-md-4 col-sm-6 mb-3"><div class="card h-100 cd cd1" style="border-left-color:var(--vr);"><div class="card-body position-relative">'
+        '    <div class="cd-ico" style="position:absolute; right:15px; top:15px; font-size:2rem; opacity:0.1;">💰</div>'
+        '    <div class="cl" style="color:var(--vr); font-weight:700; font-size:12px; letter-spacing:1px; margin-bottom:5px;">GASTOS AL 16%</div>'
+        '    <div class="cn position-relative z-1" id="cnt-tot16" style="font-size:1.8rem; font-weight:700; line-height:1;">...</div>'
+        '    <div class="cm position-relative z-1 mt-2" id="mnt-tot16" style="font-family:\'JetBrains Mono\', monospace; color:#d4a373; font-size:14px; font-weight:700;">...</div>'
+        '  </div></div></div>\n'
+
+        '  <div class="col-xl-3 col-md-4 col-sm-6 mb-3"><div class="card h-100 cd cd4" style="border-left-color:var(--am);"><div class="card-body position-relative">'
+        '    <div class="cd-ico" style="position:absolute; right:15px; top:15px; font-size:2rem; opacity:0.1;">🌾</div>'
+        '    <div class="cl" style="color:var(--am); font-weight:700; font-size:12px; letter-spacing:1px; margin-bottom:5px;">GASTOS AL 0%</div>'
+        '    <div class="cn position-relative z-1" id="cnt-tot0" style="font-size:1.8rem; font-weight:700; line-height:1;">...</div>'
+        '    <div class="cm position-relative z-1 mt-2" id="mnt-tot0" style="font-family:\'JetBrains Mono\', monospace; color:#d4a373; font-size:14px; font-weight:700;">...</div>'
+        '  </div></div></div>\n'
+
+        '  <div class="col-xl-3 col-md-4 col-sm-6 mb-3"><div class="card h-100 cd cd-az" style="border-left-color:var(--az);"><div class="card-body position-relative">'
+        '    <div class="cd-ico" style="position:absolute; right:15px; top:15px; font-size:2rem; opacity:0.1;">🤝</div>'
+        '    <div class="cl" style="color:var(--az); font-weight:700; font-size:12px; letter-spacing:1px; margin-bottom:5px;">TOTAL 16 Y 0% JUNTOS</div>'
+        '    <div class="cn position-relative z-1" id="cnt-juntos" style="font-size:1.8rem; font-weight:700; line-height:1;">...</div>'
+        '    <div class="cm position-relative z-1 mt-2" id="mnt-juntos" style="font-family:\'JetBrains Mono\', monospace; color:#d4a373; font-size:14px; font-weight:700;">...</div>'
+        '  </div></div></div>\n'
+
+        '  <div class="col-xl-3 col-md-4 col-sm-6 mb-3"><div class="card h-100 cd cd5" style="border-left-color:#e67e22;"><div class="card-body position-relative">'
+        '    <div class="cd-ico" style="position:absolute; right:15px; top:15px; font-size:2rem; opacity:0.1;">💵</div>'
+        '    <div class="cl" style="color:#666; font-weight:700; font-size:12px; letter-spacing:1px; margin-bottom:5px;">EFECTIVO</div>'
+        '    <div class="cn position-relative z-1" id="cnt-efe" style="font-size:1.8rem; font-weight:700; line-height:1;">...</div>'
+        '    <div class="cm position-relative z-1 mt-2" style="visibility:hidden">.</div>'
+        '  </div></div></div>\n'
+
+        '  <div class="col-xl-3 col-md-4 col-sm-6 mb-3"><div class="card h-100 cd cd2" style="border-left-color:var(--ro);"><div class="card-body position-relative">'
+        '    <div class="cd-ico" style="position:absolute; right:15px; top:15px; font-size:2rem; opacity:0.1;">🚫</div>'
+        '    <div class="cl" style="color:var(--ro); font-weight:700; font-size:12px; letter-spacing:1px; margin-bottom:5px;">NO DEDUCIBLES</div>'
+        '    <div class="cn position-relative z-1" id="cnt-nod" style="font-size:1.8rem; font-weight:700; line-height:1;">...</div>'
+        '    <div class="cm position-relative z-1 mt-2" id="mnt-nod" style="font-family:\'JetBrains Mono\', monospace; color:#d4a373; font-size:14px; font-weight:700;">...</div>'
+        '  </div></div></div>\n'
+
+        '  <div class="col-xl-3 col-md-4 col-sm-6 mb-3"><div class="card h-100 cd cd3" style="border-left-color:#999;"><div class="card-body position-relative">'
+        '    <div class="cd-ico" style="position:absolute; right:15px; top:15px; font-size:2rem; opacity:0.1;">⏳</div>'
+        '    <div class="cl" style="color:#666; font-weight:700; font-size:12px; letter-spacing:1px; margin-bottom:5px;">PENDIENTES</div>'
+        '    <div class="cn position-relative z-1" id="cnt-pen" style="font-size:1.8rem; font-weight:700; line-height:1;">...</div>'
+        '    <div class="cm position-relative z-1 mt-2" id="mnt-pen" style="font-family:\'JetBrains Mono\', monospace; color:#d4a373; font-size:14px; font-weight:700;">...</div>'
+        '  </div></div></div>\n'
+
+        '  <div class="col-xl-3 col-md-4 col-sm-6 mb-3"><div class="card h-100 cd cd1" style="border-left-color:#ccc;"><div class="card-body position-relative">'
+        '    <div class="cd-ico" style="position:absolute; right:15px; top:15px; font-size:2rem; opacity:0.1;">🧾</div>'
+        '    <div class="cl" style="color:#666; font-weight:700; font-size:12px; letter-spacing:1px; margin-bottom:5px;">TOTAL FACTURAS</div>'
+        '    <div class="cn position-relative z-1" id="cnt-tot" style="font-size:1.8rem; font-weight:700; line-height:1;">{tf}</div>'
+        '    <div class="cm position-relative z-1 mt-2" style="visibility:hidden">.</div>'
+        '  </div></div></div>\n'
+
+        '  <div class="col-xl-3 col-md-4 col-sm-6 mb-3"><div class="card h-100 cd cd-click" onclick="toggleDiot(this)" title="Abrir Proveedores DIOT" style="border-left-color:var(--am); background:linear-gradient(145deg, #1C1C28, #2A2A3A); cursor:pointer;"><div class="card-body position-relative">'
+        '    <div class="cd-ico" style="position:absolute; right:15px; top:15px; font-size:2rem; opacity:0.1;">📋</div>'
+        '    <div class="cl" style="color:var(--am); font-weight:700; font-size:12px; letter-spacing:2px; margin-bottom:5px;">IR A</div>'
+        '    <div class="cn position-relative z-1" style="color:#FFF; font-size:1.8rem; font-weight:700; line-height:1;">DIOT</div>'
+        '    <div class="cm position-relative z-1 mt-2" style="color:#8E8E9A; font-size:11px;">Abrir Proveedores</div>'
+        '  </div></div></div>\n'
         '</div>\n'
         '<div class="leyenda"><span class="ley-tit">COLORES:</span>\n'
         '  <span class="ley-item"><span class="ley-dot" style="background:#C6EFCE"></span>DED/EFE 16%</span>\n'
@@ -1291,12 +1594,14 @@ function rc(inp) {
         '</div>\n'
         '<div class="fls"><span class="fll">FILTRAR:</span>\n'
         '  <button class="bf ac"  onclick="ft(\'todos\',this)">TODOS ({tf})</button>\n'
-        '  <button class="bf bdd" onclick="ft(\'ded\',this)">DED ({ndd})</button>\n'
-        '  <button class="bf bef" onclick="ft(\'efe\',this)">EFE ({ne})</button>\n'
-        '  <button class="bf bno" onclick="ft(\'no-ded\',this)">NO DED ({nn})</button>\n'
-        '  <button class="bf bpp" onclick="ft(\'pendiente\',this)">PEND ({np})</button>\n'
-        '  <button class="bf beg" onclick="ft(\'egreso\',this)">EGRESO ({neg})</button>\n'
-        '  <button class="bf bcp" onclick="ft(\'complemento\',this)">CP01 ({nc})</button>\n'
+        '  <button class="bf bdd" onclick="ft(\'ded16\',this)">DED 16% (...)</button>\n'
+        '  <button class="bf bdo" onclick="ft(\'ded0\',this)">DED 0% (...)</button>\n'
+        '  <button class="bf bmix" onclick="ft(\'ded160\',this)">16 Y 0% (...)</button>\n'
+        '  <button class="bf bef" onclick="ft(\'efe\',this)">EFE (...)</button>\n'
+        '  <button class="bf bno" onclick="ft(\'no-ded\',this)">NO DED (...)</button>\n'
+        '  <button class="bf bpp" onclick="ft(\'pendiente\',this)">PEND (...)</button>\n'
+        '  <button class="bf beg" onclick="ft(\'egreso\',this)">EGRESO (...)</button>\n'
+        '  <button class="bf bcp" onclick="ft(\'complemento\',this)">CP01 (...)</button>\n'
         '  <button class="bf breset" onclick="limpiarCambios()" title="Borrar cambios manuales y volver al original">↺ LIMPIAR</button>\n'
         '  <button class="bf breset" onclick="exportarCambiosCSV()" title="Descargar cambios manuales como CSV de respaldo" style="border-color:#1976D2;color:#1976D2">⬇ EXPORTAR CAMBIOS</button>\n'
         '</div>\n'
@@ -1307,13 +1612,47 @@ function rc(inp) {
         '<div id="diot-section" style="display:none">{diot_html}</div>\n'
         '<div class="tw"><table id="tbl" class="display" style="width:100%">\n'
         '  <thead><tr>'
-        '<th>FOLIO FISCAL</th><th>UUID REL.</th><th>FECHA</th><th>RAZON SOCIAL</th>\n'
+        '<th>#</th><th>FOLIO FISCAL</th><th>UUID REL.</th><th>FECHA</th><th>RAZON SOCIAL</th>\n'
         '    <th>SUBTOTAL 16%</th><th>IVA 16%</th><th>SUB 0%</th><th>TOTAL</th>\n'
         '    <th>METODO</th><th>FORMA PAGO</th><th>USO CFDI</th>'
         '<th>ESTATUS</th><th>COMPLEMENTOS / OBS</th>\n'
         '  </tr></thead>\n'
         '  <tbody>{fs}</tbody>\n'
         '</table></div>\n'
+        '<div class="ext-wrap">\n'
+        '  <div class="ext-card">\n'
+        '    <div class="ext-tt">NÓMINAS {mes}</div>\n'
+        '    <div class="ext-tbl-wrap"><table class="ext-tbl" id="tbl-nom">\n'
+        '      <thead><tr><th>FOLIO FISCAL</th><th>FECHA</th><th>RAZÓN SOCIAL</th><th>SUELDO</th><th>ISR/ISPT</th><th>IMSS</th><th>TOTAL</th><th>USO CFDI</th><th>ESTATUS</th><th></th></tr></thead>\n'
+        '      <tbody><tr>'
+        '<td><input class="ext-ip" style="width:180px"></td><td><input class="ext-ip" style="width:70px"></td>'
+        '<td><input class="ext-ip" style="width:140px"></td>'
+        '<td><input class="ext-ip num-nom" style="color:var(--am);width:70px"></td>'
+        '<td><input class="ext-ip num-nom" style="color:var(--rs);width:70px"></td>'
+        '<td><input class="ext-ip num-nom" style="color:var(--vr);width:70px"></td>'
+        '<td><input class="ext-ip num-nom" style="width:70px;background:rgba(255,255,255,0.05);padding:4px"></td>'
+        '<td><input class="ext-ip" style="width:60px"></td><td><input class="ext-ip" style="width:80px"></td>'
+        '<td style="width:30px;text-align:center"><button class="ext-del" onclick="delExtRow(this, \'tbl-nom\')" title="Eliminar fila">×</button></td>'
+        '</tr></tbody>\n'
+        '      <tfoot><tr class="ext-tot-row"><td colspan="3" style="text-align:right;color:var(--am)">TOTALES:</td><td id="tot-nom-sueldo">$0.00</td><td id="tot-nom-isr">$0.00</td><td id="tot-nom-imss">$0.00</td><td id="tot-nom-total" style="color:var(--am2)">$0.00</td><td colspan="3"></td></tr></tfoot>\n'
+        '    </table></div>\n'
+        '    <button class="ext-btn" onclick="addExtRow(\'tbl-nom\')">+ AGREGAR FILA</button>\n'
+        '  </div>\n'
+        '  <div class="ext-card depr">\n'
+        '    <div class="ext-tt" style="color:var(--az)">DEPRECIACIONES {mes}</div>\n'
+        '    <div class="ext-tbl-wrap"><table class="ext-tbl" id="tbl-dep">\n'
+        '      <thead><tr><th>CUENTA</th><th>FECHA</th><th>NOMBRE</th><th>TOTAL</th><th></th></tr></thead>\n'
+        '      <tbody><tr>'
+        '<td><input class="ext-ip" style="width:110px"></td><td><input class="ext-ip" style="width:70px"></td>'
+        '<td><input class="ext-ip" style="width:250px"></td>'
+        '<td><input class="ext-ip num-dep" style="color:var(--am2);width:90px;background:rgba(255,255,255,0.05);padding:4px"></td>'
+        '<td style="width:30px;text-align:center"><button class="ext-del" onclick="delExtRow(this, \'tbl-dep\')" title="Eliminar fila">×</button></td>'
+        '</tr></tbody>\n'
+        '      <tfoot><tr class="ext-tot-row"><td colspan="3" style="text-align:right;color:var(--az)">TOTALES:</td><td id="tot-dep-total" style="color:var(--am2)">$0.00</td><td></td></tr></tfoot>\n'
+        '    </table></div>\n'
+        '    <button class="ext-btn" style="color:var(--az);background:rgba(0,87,255,0.1)" onclick="addExtRow(\'tbl-dep\')">+ AGREGAR FILA</button>\n'
+        '  </div>\n'
+        '</div>\n'
         '<footer>\n'
         '  <div class="fl2"><span class="r">Rea</span>Des<span class="f">F</span></div>\n'
         '  <div class="fi">Sinergia REA . ReaDesF1.9 . Mexico 2026<br>'
@@ -1322,11 +1661,7 @@ function rc(inp) {
         '</footer>\n'
     ).format(
         mes=mes, reg_cod=reg_cod, reg_nombre=reg_nombre, now=now_str,
-        nd=n_ded+n_efe, md='{:,.2f}'.format(m_ded), ne=n_efe,
-        nn=n_no_ded,    mn='{:,.2f}'.format(m_no_ded),
-        np=n_pend,      mp='{:,.2f}'.format(m_pend),
-        tf=total_f, ndd=n_ded, neg=n_egreso, nc=n_comp,
-        nd2=n_ded+n_efe, fs=fs,
+        tf=total_f, nn=n_no_ded, np=n_pend, nd2=(n_ded+n_efe), fs=fs,
         diot_html=generar_diot_html(filas, ppd_pend, idx_razones, mes)
     )
 
