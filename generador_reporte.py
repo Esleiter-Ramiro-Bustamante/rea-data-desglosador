@@ -647,8 +647,8 @@ def generar_html(filas, ppd_pend, cp01_a_ppd, idx_razones, out, mes='', stats=No
   --tx: #1A1A2E; --ts: #5A5A6E;
   --vr: #16A34A; --rj: #DC2626; --am2: #B8860B;
 }
-* { margin:0; padding:0; box-sizing:border-box; }
-body { background:var(--fo); color:var(--tx); font-family:'DM Sans',sans-serif; }
+*, *::before, *::after { box-sizing: border-box; }
+body { background: var(--fo); color: var(--tx); font-family: 'Outfit', 'DM Sans', sans-serif; }
 
 /* ── Header ───────────────────────────────────────────────────── */
 .hd { background:linear-gradient(135deg,#1C1C28,#222230); padding:22px 40px;
@@ -671,27 +671,178 @@ body { background:var(--fo); color:var(--tx); font-family:'DM Sans',sans-serif; 
       border-radius:4px; font-family:'JetBrains Mono',monospace; font-size:11px;
       font-weight:700; border:1px solid rgba(22,163,74,0.2); }
 
-/* ── Tarjetas de resumen ──────────────────────────────────────── */
-.cs { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
-      gap:14px; padding:22px 40px; }
-.cd { background:var(--ca); border-radius:10px; padding:16px 18px;
-      border-left:4px solid transparent; box-shadow:0 2px 10px rgba(0,0,0,0.07); position:relative; overflow:hidden; }
-.cd-ico { position:absolute; top:-5px; right:-10px; font-size:65px; opacity:0.06; line-height:1; pointer-events:none; }
-.cd1 { border-color:var(--vr); }  .cd2 { border-color:var(--rj); }
-.cd3 { border-color:#999; }       .cd4 { border-color:var(--am); }
-.cd5 { border-color:#E68A00; }
-.cd-click { cursor:pointer; transition:all .2s; }
-.cd-click:hover { box-shadow:0 4px 18px rgba(22,163,74,0.18);
-                  border-left-width:6px; transform:translateY(-2px); }
-.cd-click.diot-open { border-left-color:var(--am);
-                      box-shadow:0 4px 18px rgba(184,134,11,0.25); }
-.diot-ico { font-size:8px; color:var(--am); letter-spacing:1px;
-            font-family:'JetBrains Mono',monospace; margin-left:4px;
-            opacity:.7; }
-.cl { font-size:9px; color:var(--ts); letter-spacing:1.5px; text-transform:uppercase;
-      font-family:'JetBrains Mono',monospace; }
-.cn { font-family:'Bebas Neue',sans-serif; font-size:36px; color:var(--tx); margin:4px 0; }
-.cm { font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--am2); }
+/* ── Grid de Cards ────────────────────────────────────────────── */
+.cards-section { padding: 28px 40px 8px; }
+
+/* ── Card base premium ────────────────────────────────────────── */
+.cd {
+  background: #ffffff;
+  border-radius: 16px;
+  border: none;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04);
+  position: relative;
+  overflow: hidden;
+  transition: transform .22s cubic-bezier(.4,0,.2,1), box-shadow .22s;
+  min-height: 130px;
+}
+.cd::before {
+  content: '';
+  display: block;
+  height: 4px;
+  width: 100%;
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  border-radius: 16px 16px 0 0;
+}
+.cd:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 36px rgba(0,0,0,0.13), 0 2px 8px rgba(0,0,0,0.06);
+}
+
+/* ── Variantes de color (barra superior) ──────────────────────── */
+.cd1::before  { background: linear-gradient(90deg, var(--vr), #34d399); }
+.cd2::before  { background: linear-gradient(90deg, var(--rj), #f87171); }
+.cd3::before  { background: linear-gradient(90deg, #94a3b8, #cbd5e1); }
+.cd4::before  { background: linear-gradient(90deg, var(--am), #fde68a); }
+.cd5::before  { background: linear-gradient(90deg, #E68A00, #fbbf24); }
+.cd-az::before { background: linear-gradient(90deg, var(--az), #60a5fa); }
+
+/* ── Ícono decorativo de fondo ────────────────────────────────── */
+.cd-ico {
+  position: absolute;
+  bottom: -8px; right: 10px;
+  font-size: 72px;
+  opacity: 0.055;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+  filter: grayscale(0.3);
+}
+
+/* ── Contenido de la card ─────────────────────────────────────── */
+.cd-body {
+  padding: 20px 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  height: 100%;
+}
+
+/* ── Etiqueta superior ────────────────────────────────────────── */
+.cl {
+  font-size: 10px;
+  font-family: 'Outfit', 'JetBrains Mono', monospace;
+  font-weight: 600;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: var(--ts);
+  margin-bottom: 4px;
+  margin-top: 4px;
+}
+
+/* ── Número principal ─────────────────────────────────────────── */
+.cn {
+  font-family: 'Outfit', 'Bebas Neue', sans-serif;
+  font-size: 44px;
+  font-weight: 800;
+  color: var(--tx);
+  line-height: 1;
+  letter-spacing: -1px;
+  margin: 0;
+}
+
+/* ── Monto secundario ─────────────────────────────────────────── */
+.cm {
+  font-family: 'Outfit', 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--am2);
+  margin-top: 6px;
+  letter-spacing: 0.3px;
+}
+
+/* ── Card clickeable (DIOT) ───────────────────────────────────── */
+.cd-click { cursor: pointer; }
+.cd-click:hover {
+  box-shadow: 0 12px 36px rgba(184,134,11,0.18);
+}
+.cd-click.diot-open::before {
+  background: linear-gradient(90deg, var(--am), #fde68a);
+}
+.diot-ico {
+  font-size: 8px; color: var(--am); letter-spacing: 1px;
+  font-family: 'JetBrains Mono', monospace; margin-left: 4px;
+  opacity: .7;
+}
+
+/* ── Sección colapsable desglose EFE / DED ────────────────────── */
+.desglose-toggle {
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 40px 10px;
+  cursor: pointer; user-select: none;
+}
+.desglose-toggle .dt-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; color: var(--ts); letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.desglose-toggle .dt-arrow {
+  font-size: 11px; color: var(--rs);
+  transition: transform .25s; display: inline-block;
+}
+.desglose-toggle .dt-line {
+  flex: 1; height: 1px; background: var(--bo);
+}
+.desglose-wrap {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height .35s cubic-bezier(.4,0,.2,1), opacity .3s;
+  opacity: 0;
+}
+.desglose-wrap.open {
+  max-height: 400px;
+  opacity: 1;
+}
+.desglose-wrap.open ~ .desglose-toggle .dt-arrow {
+  transform: rotate(180deg);
+}
+/* Cards mini dentro del desglose */
+.cd-mini {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  padding: 14px 16px 12px;
+  position: relative;
+  overflow: hidden;
+  min-height: 90px;
+}
+.cd-mini::before {
+  content: ''; display: block; height: 3px;
+  position: absolute; top: 0; left: 0; right: 0;
+  border-radius: 12px 12px 0 0;
+}
+.cd-mini.efe::before  { background: linear-gradient(90deg, #E68A00, #fbbf24); }
+.cd-mini.ded::before  { background: linear-gradient(90deg, var(--vr), #34d399); }
+.cd-mini-label {
+  font-family: 'Outfit', monospace; font-size: 9px;
+  font-weight: 700; letter-spacing: 1.8px;
+  text-transform: uppercase; color: var(--ts);
+  margin-bottom: 4px; margin-top: 2px;
+}
+.cd-mini-num {
+  font-family: 'Outfit', sans-serif; font-size: 20px;
+  font-weight: 800; color: var(--tx); line-height: 1;
+}
+.cd-mini-sub {
+  font-size: 10px; color: var(--ts); margin-top: 3px;
+  font-family: 'JetBrains Mono', monospace;
+}
+/* Separador de grupo dentro del desglose */
+.desglose-group-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; color: var(--ts); letter-spacing: 2px;
+  text-transform: uppercase; padding: 4px 0 6px;
+}
 
 /* ── Leyenda de colores ───────────────────────────────────────── */
 .leyenda { display:flex; gap:8px; padding:10px 40px 14px; flex-wrap:wrap; align-items:center; }
@@ -877,9 +1028,28 @@ footer { padding:28px 40px; border-top:1px solid var(--bo);
 .se.mes-ant   { background:#CFD8DC; color:#263238; }
 
 .ext-wrap { padding:0 40px 40px; display:flex; flex-direction:column; gap:24px; }
-.ext-card { background:var(--ca); border-radius:10px; padding:24px; box-shadow:0 4px 16px rgba(0,0,0,0.06); border-top:4px solid var(--rs); }
-.ext-card.depr { border-top-color:var(--az); }
-.ext-tt { font-family:'Bebas Neue',sans-serif; font-size:24px; color:var(--tx); margin-bottom:16px; letter-spacing:1px; }
+.ext-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 28px 28px 20px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04);
+  border-top: 4px solid var(--rs);
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow .22s;
+}
+.ext-card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--rs), #ff8fb8);
+  border-radius: 16px 16px 0 0;
+}
+.ext-card.depr { border-top-color: var(--az); }
+.ext-card.depr::after { background: linear-gradient(90deg, var(--az), #60a5fa); }
+.ext-card:hover { box-shadow: 0 12px 36px rgba(0,0,0,0.10); }
+.ext-tt { font-family:'Outfit','Bebas Neue',sans-serif; font-size:22px; font-weight:700; color:var(--tx); margin-bottom:16px; letter-spacing:0.5px; }
 .ext-tbl-wrap { overflow-x:auto; }
 .ext-tbl { width:100%; border-collapse:collapse; min-width:1100px; }
 .ext-tbl th { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--ts); border-bottom:1px solid var(--bo); padding:8px; text-align:left; white-space:nowrap; }
@@ -1117,7 +1287,14 @@ function toggleDiot(card) {
 /* ── actualizarContadores(): recuenta data-est en TODAS las filas */
 function actualizarContadores() {
   let cnt16=0, cnt0=0, cnt160=0, e16=0, e0=0, e160=0, nod=0, pen=0, eg=0, cp=0, tom=0, tma=0, tot=0;
-  let m16=0, m0=0, mNod=0, mPen=0;
+
+  // ── Acumuladores separados por componente ──────────────────────
+  // SUB16%, IVA16%, SUB0% se guardan por separado (no mezclados)
+  // Prefijo d_ = deducible (ded*), e_ = efectivo (efe*)
+  let dSub16=0, dIva16=0, dSub0=0;   // transferencia/tarjeta deducible
+  let eSub16=0, eIva16=0, eSub0=0;   // efectivo deducible
+  let mNod=0, mPen=0;                 // no deducibles y pendientes (sobre TOTAL)
+
   $(dtable.rows().nodes()).each(function() {
     const est  = this.getAttribute('data-est') || '';
     const s2   = parseFloat(String($(this).find('.ip').eq(0).val()).replace(/[^0-9.-]/g, '')) || 0;
@@ -1126,21 +1303,31 @@ function actualizarContadores() {
     const tds  = $(this).find('td:eq(8)').text() || '0';
     const tots = parseFloat(tds.replace(/[^0-9.-]/g,'')) || 0;
     tot++;
-    
-    if      (est === 'ded16' || est === 'ded') { cnt16++; m16 += (s2 + i16); }
-    else if (est === 'ded0')                   { cnt0++;  m0  += s0; }
-    else if (est === 'ded160')                 { cnt160++; m16 += (s2 + i16); m0 += s0; }
-    else if (est === 'efe16')                  { e16++;   m16 += (s2 + i16); }
-    else if (est === 'efe0')                   { e0++;    m0  += s0; }
-    else if (est === 'efe160')                 { e160++;  m16 += (s2 + i16); m0 += s0; }
-    else if (est === 'no-ded')                 { nod++;   mNod += tots; }
-    else if (est === 'pendiente')              { pen++;   mPen += tots; }
+
+    if      (est === 'ded16' || est === 'ded') { cnt16++;  dSub16 += s2; dIva16 += i16; }
+    else if (est === 'ded0')                   { cnt0++;   dSub0  += s0; }
+    else if (est === 'ded160')                 { cnt160++; dSub16 += s2; dIva16 += i16; dSub0 += s0; }
+    else if (est === 'efe16')                  { e16++;    eSub16 += s2; eIva16 += i16; }
+    else if (est === 'efe0')                   { e0++;     eSub0  += s0; }
+    else if (est === 'efe160')                 { e160++;   eSub16 += s2; eIva16 += i16; eSub0 += s0; }
+    else if (est === 'no-ded')                 { nod++;    mNod   += tots; }
+    else if (est === 'pendiente')              { pen++;    mPen   += tots; }
     else if (est === 'egreso')                 { eg++; }
     else if (est === 'complemento')            { cp++; }
     else if (est === 'otro-mes')               { tom++; }
     else if (est === 'mes-ant')                { tma++; }
   });
 
+  // ── Totales consolidados ───────────────────────────────────────
+  const totalSub16 = dSub16 + eSub16;          // SUB16% total (ded + efe)
+  const totalIva16 = dIva16 + eIva16;          // IVA acreditable total (ded + efe)
+  const totalSub0  = dSub0  + eSub0;           // SUB0% total (ded + efe)
+  const granTotal  = totalSub16 + totalIva16 + totalSub0; // TOTAL deducible fiscal
+
+  const fmt = v => '$'+v.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  const el  = id => document.getElementById(id);
+
+  // ── Botones de filtro ──────────────────────────────────────────
   const bf = document.querySelectorAll('.fls .bf');
   if (bf[0]) bf[0].textContent = 'TODOS (' +tot+ ')';
   if (bf[1]) bf[1].textContent = 'DED 16% (' +cnt16+ ')';
@@ -1151,24 +1338,46 @@ function actualizarContadores() {
   if (bf[6]) bf[6].textContent = 'PEND ('  +pen+ ')';
   if (bf[7]) bf[7].textContent = 'EGRESO ('+eg+  ')';
   if (bf[8]) bf[8].textContent = 'CP01 ('  +cp+  ')';
-  
-  const fmt = v => '$'+v.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
-  const el  = id => document.getElementById(id);
-  
-  if (el('cnt-tot16')) el('cnt-tot16').textContent = (cnt16 + cnt160 + e16 + e160);
-  if (el('mnt-tot16')) el('mnt-tot16').textContent = fmt(m16);
-  if (el('cnt-tot0'))  el('cnt-tot0').textContent  = (cnt0 + cnt160 + e0 + e160);
-  if (el('mnt-tot0'))  el('mnt-tot0').textContent  = fmt(m0);
-  if (el('cnt-juntos')) el('cnt-juntos').textContent = (cnt16 + cnt160 + e16 + e160 + cnt0 + e0);
-  if (el('mnt-juntos')) el('mnt-juntos').textContent = fmt(m16 + m0);
-  if (el('cnt-nod'))   el('cnt-nod').textContent   = nod;
-  
-  if (el('cnt-efe')) el('cnt-efe').textContent = (e16 + e0 + e160);
-  if (el('cnt-nod')) el('cnt-nod').textContent = nod;
-  if (el('mnt-nod')) el('mnt-nod').textContent = fmt(mNod);
-  if (el('cnt-pen')) el('cnt-pen').textContent = pen;
-  if (el('mnt-pen')) el('mnt-pen').textContent = fmt(mPen);
-  if (el('cnt-tot')) el('cnt-tot').textContent = tot;
+
+  // ── Cards principales (fila 1) ─────────────────────────────────
+  // GASTOS AL 16% → SUB16% de todos los deducibles (ded + efe)
+  if (el('cnt-tot16'))      el('cnt-tot16').textContent      = (cnt16 + cnt160 + e16 + e160);
+  if (el('mnt-tot16'))      el('mnt-tot16').textContent      = fmt(totalSub16);
+
+  // GASTOS AL 0% → SUB0% de todos los deducibles (ded + efe)
+  if (el('cnt-tot0'))       el('cnt-tot0').textContent       = (cnt0 + cnt160 + e0 + e160);
+  if (el('mnt-tot0'))       el('mnt-tot0').textContent       = fmt(totalSub0);
+
+  // IVA ACREDITABLE → IVA16% solo de facturas deducibles
+  if (el('mnt-iva-acred'))  el('mnt-iva-acred').textContent  = fmt(totalIva16);
+
+  // GRAN TOTAL → SUB16% + SUB0% + IVA16% (solo deducibles)
+  if (el('mnt-gran-total')) el('mnt-gran-total').textContent = fmt(granTotal);
+
+  // ── Cards secundarias (existentes) ────────────────────────────
+  // EFECTIVO → conteo + monto (eSub16 + eIva16 + eSub0)
+  if (el('cnt-efe'))        el('cnt-efe').textContent        = (e16 + e0 + e160);
+  if (el('mnt-efe'))        el('mnt-efe').textContent        = fmt(eSub16 + eIva16 + eSub0);
+
+  // NO DEDUCIBLES → sobre TOTAL de la factura
+  if (el('cnt-nod'))        el('cnt-nod').textContent        = nod;
+  if (el('mnt-nod'))        el('mnt-nod').textContent        = fmt(mNod);
+
+  // PENDIENTES → sobre TOTAL de la factura
+  if (el('cnt-pen'))        el('cnt-pen').textContent        = pen;
+  if (el('mnt-pen'))        el('mnt-pen').textContent        = fmt(mPen);
+
+  // TOTAL FACTURAS
+  if (el('cnt-tot'))        el('cnt-tot').textContent        = tot;
+
+  // ── Cards colapsables (desglose EFE / DED) ────────────────────
+  if (el('mnt-efe16'))      el('mnt-efe16').textContent      = fmt(eSub16);
+  if (el('mnt-efe16-iva'))  el('mnt-efe16-iva').textContent  = fmt(eIva16);
+  if (el('mnt-efe0'))       el('mnt-efe0').textContent       = fmt(eSub0);
+  if (el('mnt-ded16'))      el('mnt-ded16').textContent      = fmt(dSub16);
+  if (el('mnt-ded16-iva'))  el('mnt-ded16-iva').textContent  = fmt(dIva16);
+  if (el('mnt-ded0'))       el('mnt-ded0').textContent       = fmt(dSub0);
+
   actualizarDiot();
 }
 
@@ -1494,6 +1703,15 @@ function loadExt() {
   bindExtEvents();
   calcExtTotals();
 }
+
+/* ── toggleDesglose(): mostrar/ocultar desglose EFE/DED ─────────── */
+function toggleDesglose() {
+  const wrap  = document.getElementById('desglose-wrap');
+  const arrow = document.getElementById('desglose-arrow');
+  if (!wrap) return;
+  const open = wrap.classList.toggle('open');
+  if (arrow) arrow.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
+}
 """
 
     # ── Ensamblado final del HTML ───────────────────────────────────
@@ -1506,10 +1724,13 @@ function loadExt() {
         '<meta name="viewport" content="width=device-width,initial-scale=1.0">\n'
         '<title>Reporte Fiscal ' + mes + ' - ReaDesF1.9</title>\n'
         '<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue'
+        '&family=Outfit:wght@300;400;500;600;700;800;900'
         '&family=DM+Sans:wght@300;400;500;700'
         '&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">\n'
+        '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">\n'
         '<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>\n'
         '<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>\n'
+        '<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>\n'
         '<style>\n' + _CSS + '\n</style>\n'
         '</head><body>\n'
     )
@@ -1526,62 +1747,175 @@ function loadExt() {
         '<span class="pv">PUE</span>'
         '<span class="pv">01, 02, 03, 28</span>'
         '<span class="pv">G01 Y G03</span></div>\n'
-        '<div class="row gx-2 mb-3">\n'
-        '  <div class="col-xl-3 col-md-4 col-sm-6 mb-3"><div class="card h-100 cd cd1" style="border-left-color:var(--vr);"><div class="card-body position-relative">'
-        '    <div class="cd-ico" style="position:absolute; right:15px; top:15px; font-size:2rem; opacity:0.1;">💰</div>'
-        '    <div class="cl" style="color:var(--vr); font-weight:700; font-size:12px; letter-spacing:1px; margin-bottom:5px;">GASTOS AL 16%</div>'
-        '    <div class="cn position-relative z-1" id="cnt-tot16" style="font-size:1.8rem; font-weight:700; line-height:1;">...</div>'
-        '    <div class="cm position-relative z-1 mt-2" id="mnt-tot16" style="font-family:\'JetBrains Mono\', monospace; color:#d4a373; font-size:14px; font-weight:700;">...</div>'
-        '  </div></div></div>\n'
+        '<div class="cards-section">\n'
+        '  <div class="row g-3">\n'
 
-        '  <div class="col-xl-3 col-md-4 col-sm-6 mb-3"><div class="card h-100 cd cd4" style="border-left-color:var(--am);"><div class="card-body position-relative">'
-        '    <div class="cd-ico" style="position:absolute; right:15px; top:15px; font-size:2rem; opacity:0.1;">🌾</div>'
-        '    <div class="cl" style="color:var(--am); font-weight:700; font-size:12px; letter-spacing:1px; margin-bottom:5px;">GASTOS AL 0%</div>'
-        '    <div class="cn position-relative z-1" id="cnt-tot0" style="font-size:1.8rem; font-weight:700; line-height:1;">...</div>'
-        '    <div class="cm position-relative z-1 mt-2" id="mnt-tot0" style="font-family:\'JetBrains Mono\', monospace; color:#d4a373; font-size:14px; font-weight:700;">...</div>'
-        '  </div></div></div>\n'
+        '    <div class="col-xl col-lg-3 col-md-4 col-sm-6">\n'
+        '      <div class="cd cd1 h-100">\n'
+        '        <div class="cd-ico">📋</div>\n'
+        '        <div class="cd-body">\n'
+        '          <span class="cl" style="color:var(--vr)">GASTOS AL 16%</span>\n'
+        '          <span class="cn" id="cnt-tot16">—</span>\n'
+        '          <span class="cm" id="mnt-tot16">—</span>\n'
+        '        </div>\n'
+        '      </div>\n'
+        '    </div>\n'
 
-        '  <div class="col-xl-3 col-md-4 col-sm-6 mb-3"><div class="card h-100 cd cd-az" style="border-left-color:var(--az);"><div class="card-body position-relative">'
-        '    <div class="cd-ico" style="position:absolute; right:15px; top:15px; font-size:2rem; opacity:0.1;">🤝</div>'
-        '    <div class="cl" style="color:var(--az); font-weight:700; font-size:12px; letter-spacing:1px; margin-bottom:5px;">TOTAL 16 Y 0% JUNTOS</div>'
-        '    <div class="cn position-relative z-1" id="cnt-juntos" style="font-size:1.8rem; font-weight:700; line-height:1;">...</div>'
-        '    <div class="cm position-relative z-1 mt-2" id="mnt-juntos" style="font-family:\'JetBrains Mono\', monospace; color:#d4a373; font-size:14px; font-weight:700;">...</div>'
-        '  </div></div></div>\n'
+        '    <div class="col-xl col-lg-3 col-md-4 col-sm-6">\n'
+        '      <div class="cd cd4 h-100">\n'
+        '        <div class="cd-ico">🌾</div>\n'
+        '        <div class="cd-body">\n'
+        '          <span class="cl" style="color:var(--am)">GASTOS AL 0%</span>\n'
+        '          <span class="cn" id="cnt-tot0">—</span>\n'
+        '          <span class="cm" id="mnt-tot0">—</span>\n'
+        '        </div>\n'
+        '      </div>\n'
+        '    </div>\n'
 
-        '  <div class="col-xl-3 col-md-4 col-sm-6 mb-3"><div class="card h-100 cd cd5" style="border-left-color:#e67e22;"><div class="card-body position-relative">'
-        '    <div class="cd-ico" style="position:absolute; right:15px; top:15px; font-size:2rem; opacity:0.1;">💵</div>'
-        '    <div class="cl" style="color:#666; font-weight:700; font-size:12px; letter-spacing:1px; margin-bottom:5px;">EFECTIVO</div>'
-        '    <div class="cn position-relative z-1" id="cnt-efe" style="font-size:1.8rem; font-weight:700; line-height:1;">...</div>'
-        '    <div class="cm position-relative z-1 mt-2" style="visibility:hidden">.</div>'
-        '  </div></div></div>\n'
+        '    <div class="col-xl col-lg-3 col-md-4 col-sm-6">\n'
+        '      <div class="cd cd-az h-100">\n'
+        '        <div class="cd-ico">🏦</div>\n'
+        '        <div class="cd-body">\n'
+        '          <span class="cl" style="color:var(--az)">IVA ACREDITABLE</span>\n'
+        '          <span class="cn" style="font-size:32px" id="mnt-iva-acred">—</span>\n'
+        '          <span class="cm" style="color:var(--az);opacity:.7">Solo facturas deducibles</span>\n'
+        '        </div>\n'
+        '      </div>\n'
+        '    </div>\n'
 
-        '  <div class="col-xl-3 col-md-4 col-sm-6 mb-3"><div class="card h-100 cd cd2" style="border-left-color:var(--ro);"><div class="card-body position-relative">'
-        '    <div class="cd-ico" style="position:absolute; right:15px; top:15px; font-size:2rem; opacity:0.1;">🚫</div>'
-        '    <div class="cl" style="color:var(--ro); font-weight:700; font-size:12px; letter-spacing:1px; margin-bottom:5px;">NO DEDUCIBLES</div>'
-        '    <div class="cn position-relative z-1" id="cnt-nod" style="font-size:1.8rem; font-weight:700; line-height:1;">...</div>'
-        '    <div class="cm position-relative z-1 mt-2" id="mnt-nod" style="font-family:\'JetBrains Mono\', monospace; color:#d4a373; font-size:14px; font-weight:700;">...</div>'
-        '  </div></div></div>\n'
+        '    <div class="col-xl col-lg-3 col-md-4 col-sm-6">\n'
+        '      <div class="cd cd5 h-100">\n'
+        '        <div class="cd-ico">💵</div>\n'
+        '        <div class="cd-body">\n'
+        '          <span class="cl" style="color:#E68A00">EFECTIVO</span>\n'
+        '          <span class="cn" id="cnt-efe">—</span>\n'
+        '          <span class="cm" id="mnt-efe">—</span>\n'
+        '        </div>\n'
+        '      </div>\n'
+        '    </div>\n'
 
-        '  <div class="col-xl-3 col-md-4 col-sm-6 mb-3"><div class="card h-100 cd cd3" style="border-left-color:#999;"><div class="card-body position-relative">'
-        '    <div class="cd-ico" style="position:absolute; right:15px; top:15px; font-size:2rem; opacity:0.1;">⏳</div>'
-        '    <div class="cl" style="color:#666; font-weight:700; font-size:12px; letter-spacing:1px; margin-bottom:5px;">PENDIENTES</div>'
-        '    <div class="cn position-relative z-1" id="cnt-pen" style="font-size:1.8rem; font-weight:700; line-height:1;">...</div>'
-        '    <div class="cm position-relative z-1 mt-2" id="mnt-pen" style="font-family:\'JetBrains Mono\', monospace; color:#d4a373; font-size:14px; font-weight:700;">...</div>'
-        '  </div></div></div>\n'
+        '    <div class="col-xl col-lg-3 col-md-4 col-sm-6">\n'
+        '      <div class="cd cd2 h-100">\n'
+        '        <div class="cd-ico">🚫</div>\n'
+        '        <div class="cd-body">\n'
+        '          <span class="cl" style="color:var(--rj)">NO DEDUCIBLES</span>\n'
+        '          <span class="cn" id="cnt-nod">—</span>\n'
+        '          <span class="cm" id="mnt-nod">—</span>\n'
+        '        </div>\n'
+        '      </div>\n'
+        '    </div>\n'
 
-        '  <div class="col-xl-3 col-md-4 col-sm-6 mb-3"><div class="card h-100 cd cd1" style="border-left-color:#ccc;"><div class="card-body position-relative">'
-        '    <div class="cd-ico" style="position:absolute; right:15px; top:15px; font-size:2rem; opacity:0.1;">🧾</div>'
-        '    <div class="cl" style="color:#666; font-weight:700; font-size:12px; letter-spacing:1px; margin-bottom:5px;">TOTAL FACTURAS</div>'
-        '    <div class="cn position-relative z-1" id="cnt-tot" style="font-size:1.8rem; font-weight:700; line-height:1;">{tf}</div>'
-        '    <div class="cm position-relative z-1 mt-2" style="visibility:hidden">.</div>'
-        '  </div></div></div>\n'
+        '    <div class="col-xl col-lg-3 col-md-4 col-sm-6">\n'
+        '      <div class="cd cd3 h-100">\n'
+        '        <div class="cd-ico">⏳</div>\n'
+        '        <div class="cd-body">\n'
+        '          <span class="cl" style="color:var(--ts)">PENDIENTES</span>\n'
+        '          <span class="cn" id="cnt-pen">—</span>\n'
+        '          <span class="cm" id="mnt-pen">—</span>\n'
+        '        </div>\n'
+        '      </div>\n'
+        '    </div>\n'
 
-        '  <div class="col-xl-3 col-md-4 col-sm-6 mb-3"><div class="card h-100 cd cd-click" onclick="toggleDiot(this)" title="Abrir Proveedores DIOT" style="border-left-color:var(--am); background:linear-gradient(145deg, #1C1C28, #2A2A3A); cursor:pointer;"><div class="card-body position-relative">'
-        '    <div class="cd-ico" style="position:absolute; right:15px; top:15px; font-size:2rem; opacity:0.1;">📋</div>'
-        '    <div class="cl" style="color:var(--am); font-weight:700; font-size:12px; letter-spacing:2px; margin-bottom:5px;">IR A</div>'
-        '    <div class="cn position-relative z-1" style="color:#FFF; font-size:1.8rem; font-weight:700; line-height:1;">DIOT</div>'
-        '    <div class="cm position-relative z-1 mt-2" style="color:#8E8E9A; font-size:11px;">Abrir Proveedores</div>'
-        '  </div></div></div>\n'
+        '    <div class="col-xl col-lg-3 col-md-4 col-sm-6">\n'
+        '      <div class="cd cd3 h-100">\n'
+        '        <div class="cd-ico">🧾</div>\n'
+        '        <div class="cd-body">\n'
+        '          <span class="cl" style="color:var(--ts)">TOTAL FACTURAS</span>\n'
+        '          <span class="cn" id="cnt-tot">{tf}</span>\n'
+        '          <span class="cm">Este mes</span>\n'
+        '        </div>\n'
+        '      </div>\n'
+        '    </div>\n'
+
+        '    <div class="col-xl col-lg-3 col-md-4 col-sm-6">\n'
+        '      <div class="cd cd4 cd-click h-100" onclick="toggleDiot(this)" title="Abrir Proveedores DIOT"\n'
+        '           style="background:linear-gradient(145deg,#1C1C28,#2A2A3A);">\n'
+        '        <div class="cd-ico" style="opacity:0.12;">📋</div>\n'
+        '        <div class="cd-body">\n'
+        '          <span class="cl" style="color:var(--am)">VER</span>\n'
+        '          <span class="cn" style="color:#fff;font-size:36px;letter-spacing:1px">DIOT</span>\n'
+        '          <span class="cm" style="color:#8E8E9A">Proveedores</span>\n'
+        '        </div>\n'
+        '      </div>\n'
+        '    </div>\n'
+
+        '    <div class="col-xl col-lg-3 col-md-4 col-sm-6">\n'
+        '      <div class="cd h-100" style="background:linear-gradient(135deg,#1C1C28,#2e1a47);border-radius:16px;">\n'
+        '        <div class="cd-ico" style="opacity:0.13;">💎</div>\n'
+        '        <div class="cd-body">\n'
+        '          <span class="cl" style="color:var(--rs);letter-spacing:2px">GRAN TOTAL</span>\n'
+        '          <span class="cn" style="color:#fff;font-size:28px;letter-spacing:-0.5px" id="mnt-gran-total">—</span>\n'
+        '          <span class="cm" style="color:#8E8E9A;font-size:10px">Sub16% + Sub0% + IVA16%</span>\n'
+        '        </div>\n'
+        '      </div>\n'
+        '    </div>\n'
+
+        '  </div>\n'
+        '</div>\n'
+
+        '<div class="desglose-toggle" onclick="toggleDesglose()" id="desglose-btn">\n'
+        '  <span class="dt-label">▸ Desglose por tipo de pago</span>\n'
+        '  <span class="dt-line"></span>\n'
+        '  <span class="dt-arrow" id="desglose-arrow">▼</span>\n'
+        '</div>\n'
+        '<div class="desglose-wrap" id="desglose-wrap">\n'
+        '  <div class="cards-section" style="padding-top:4px;padding-bottom:16px;">\n'
+        '    <div class="row g-2">\n'
+
+        '      <div class="col-12"><span class="desglose-group-label">💵 EFECTIVO — sobre subtotal</span></div>\n'
+
+        '      <div class="col-xl col-lg-4 col-md-4 col-sm-6">\n'
+        '        <div class="cd-mini efe">\n'
+        '          <span class="cd-mini-label" style="color:#E68A00">EFE · SUB 16%</span>\n'
+        '          <div class="cd-mini-num" id="mnt-efe16">—</div>\n'
+        '          <div class="cd-mini-sub">Subtotal gravado 16%</div>\n'
+        '        </div>\n'
+        '      </div>\n'
+
+        '      <div class="col-xl col-lg-4 col-md-4 col-sm-6">\n'
+        '        <div class="cd-mini efe">\n'
+        '          <span class="cd-mini-label" style="color:#E68A00">EFE · IVA 16%</span>\n'
+        '          <div class="cd-mini-num" id="mnt-efe16-iva">—</div>\n'
+        '          <div class="cd-mini-sub">IVA acreditable efectivo</div>\n'
+        '        </div>\n'
+        '      </div>\n'
+
+        '      <div class="col-xl col-lg-4 col-md-4 col-sm-6">\n'
+        '        <div class="cd-mini efe">\n'
+        '          <span class="cd-mini-label" style="color:#E68A00">EFE · SUB 0%</span>\n'
+        '          <div class="cd-mini-num" id="mnt-efe0">—</div>\n'
+        '          <div class="cd-mini-sub">Subtotal gravado 0%</div>\n'
+        '        </div>\n'
+        '      </div>\n'
+
+        '      <div class="col-12 mt-2"><span class="desglose-group-label">💳 TRANSFERENCIA / TARJETA — sobre subtotal</span></div>\n'
+
+        '      <div class="col-xl col-lg-4 col-md-4 col-sm-6">\n'
+        '        <div class="cd-mini ded">\n'
+        '          <span class="cd-mini-label" style="color:var(--vr)">DED · SUB 16%</span>\n'
+        '          <div class="cd-mini-num" id="mnt-ded16">—</div>\n'
+        '          <div class="cd-mini-sub">Subtotal gravado 16%</div>\n'
+        '        </div>\n'
+        '      </div>\n'
+
+        '      <div class="col-xl col-lg-4 col-md-4 col-sm-6">\n'
+        '        <div class="cd-mini ded">\n'
+        '          <span class="cd-mini-label" style="color:var(--vr)">DED · IVA 16%</span>\n'
+        '          <div class="cd-mini-num" id="mnt-ded16-iva">—</div>\n'
+        '          <div class="cd-mini-sub">IVA acreditable transferencia</div>\n'
+        '        </div>\n'
+        '      </div>\n'
+
+        '      <div class="col-xl col-lg-4 col-md-4 col-sm-6">\n'
+        '        <div class="cd-mini ded">\n'
+        '          <span class="cd-mini-label" style="color:var(--vr)">DED · SUB 0%</span>\n'
+        '          <div class="cd-mini-num" id="mnt-ded0">—</div>\n'
+        '          <div class="cd-mini-sub">Subtotal gravado 0%</div>\n'
+        '        </div>\n'
+        '      </div>\n'
+
+        '    </div>\n'
+        '  </div>\n'
         '</div>\n'
         '<div class="leyenda"><span class="ley-tit">COLORES:</span>\n'
         '  <span class="ley-item"><span class="ley-dot" style="background:#C6EFCE"></span>DED/EFE 16%</span>\n'
