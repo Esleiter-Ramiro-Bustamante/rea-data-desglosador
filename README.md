@@ -24,7 +24,7 @@ Solo ejecutas `main.py`. El programa mide tu RAM y el tamaño del archivo, elige
 | Mejora | Detalle |
 |---|---|
 | Flujo de 3 pasos | PASO 1 selección → PASO 2 `_validado.xlsx` → PASO 3 `_reporte.xlsx` + `_reporte.html` |
-| `generador_reporte.py` | Nuevo módulo separado — genera reporte Excel y dashboard HTML desde el `_validado` |
+| `generador_reporte.py v2.3` | Genera reporte Excel auditable + dashboard HTML. Filtros, buscador, estatus editable, Ctrl+V desde Excel, Ctrl+Z, exportar CSV, localStorage por UUID, cruce CP01↔PPD 2 niveles, DIOT en tiempo real, detección dinámica de régimen |
 | Fórmulas cacheadas | Los 3 motores escriben fórmula + valor numérico en el XML del `.xlsx` — Python las lee sin depender de Excel |
 | Fix SUB0% gasolina | Cuando `IVA_0% == IVA_Exento == IEPS` ya no se duplica el monto |
 | Dashboard HTML | Filtros, buscador, estatus editable, contadores dinámicos, persistencia con `localStorage` |
@@ -56,10 +56,12 @@ python main.py
 |------|--------|
 | 1 | Instalar dependencias |
 | 2 | Ejecutar `python main.py` desde la terminal |
-| 3 | El programa analiza tu **RAM** y elige el motor automáticamente |
-| 4 | Usa el Asistente Gráfico para seleccionar tu carpeta y validado |
-| 5 | Selecciona el Mes y Año desde los menús desplegables |
-| 6 | Acepta (o no) ver el Log de Auditoría antes de finalizar |
+| 3 | Se abre el **Asistente Gráfico Sinergia REA** centrado en pantalla |
+| 4 | Presiona **BUSCAR ARCHIVO** — la caja se pone verde al confirmar |
+| 5 | Selecciona **MES** (ENERO–DICIEMBRE) y **AÑO** (2020–2026) desde los dropdowns — preview en tiempo real |
+| 6 | Activa o desactiva el **Log de Auditoría** (activado por defecto) |
+| 7 | Presiona **INICIAR PROCESO** — confirma el diálogo de privacidad LFPDPPP |
+| 8 | Al finalizar aparece la ventana **Proceso Terminado** con resumen y botón ACEPTAR |
 
 ---
 
@@ -142,14 +144,21 @@ El archivo principal de validación. Contiene todas las columnas originales más
 Tabla resumen auditable con una fila por factura, columnas de estatus, montos desglosados y observaciones sobre complementos CP01.
 
 ### `NOMBRE_reporte.html`
-Dashboard interactivo con:
-- **Tarjetas de resumen** — DEDUCIBLES, EFECTIVO, NO DEDUCIBLES, PENDIENTES, TOTAL
+Dashboard interactivo `generador_reporte.py v2.3` con:
+
+- **Tarjetas de resumen** — DEDUCIBLES, EFECTIVO, NO DEDUCIBLES, PENDIENTES, COMPLEMENTOS CP01, TOTAL
 - **Filtros por estatus** — DED · EFE · NO DED · PEND · EGRESO · CP01
-- **Buscador y Numeración** — Búsqueda en tiempo real por UUID/Razón y columna de índice (`#`) correlativo
-- **Colores Integrados** — Desgloses monetarios con paleta Sinergia REA (Azul, Rosa, Verde)
-- **Estatus editable y Pegado Masivo** — Edita estatus o **pega datos desde Excel** (`Ctrl+V`) directamente
-- **Persistencia** — los cambios manuales se guardan con `localStorage` y sobreviven al recargar
-- **DIOT integrada** — se despliega al hacer clic en la tarjeta DEDUCIBLES
+- **Filtros por tipo IVA** — 16% · 16Y0% · 0%
+- **Buscador en tiempo real** — por UUID, razón social, RFC o cualquier campo
+- **Columna índice `#`** — numeración correlativa visible en toda la tabla
+- **Estatus editable** — clic en cualquier celda de observaciones para editar directamente
+- **Pegado masivo desde Excel** — `Ctrl+V` pega datos copiados desde Excel en la tabla
+- **Deshacer pegado** — `Ctrl+Z` revierte el último pegado masivo
+- **Exportar cambios CSV** — botón EXPORTAR CAMBIOS descarga respaldo de cambios manuales
+- **Persistencia `localStorage`** — cambios sobreviven al recargar, guardados por UUID
+- **Colores por estatus** — 🟩 DED 16% · 🟦 16Y0% · 🟨 0% · 🟥 NO DED · 🟣 CP01 · ⬜ PEND · 🟪 EGRESO
+- **DIOT integrada** — desplegable desde tarjeta DEDUCIBLES, actualización en tiempo real
+- **Detección dinámica de régimen** — adapta reglas a 612, 626 u otros según el cliente
 
 ---
 
@@ -221,18 +230,41 @@ pip install -r requirements.txt
 ```
 ReaDesF1.9/
   │
-  ├── main.py                   ← EJECUTAR ESTE
+  ├── main.py                   ← EJECUTAR ESTE — Orquestador 3 pasos
+  │                                GUI Sinergia REA: header, dropdowns,
+  │                                feedback verde, diálogos de marca
   │
   ├── analizador_sistema.py     ← RAM + CPU + archivo → motor
+  │                                ResultadoAnalisis dataclass
+  │                                chunk_size adaptativo por RAM
   │
-  ├── motor_openpyxl.py         ← Computadoras básicas
-  ├── motor_pandas.py           ← Computadoras potentes
-  ├── motor_chunks.py           ← Archivos muy grandes +30k filas
+  ├── motor_openpyxl.py         ← Motor SEGURO/MÍNIMO
+  │                                _parchear_cache_formulas() — XML directo
+  ├── motor_pandas.py           ← Motor TURBO (vectorizado)
+  │                                Columnas a category (70% menos RAM)
+  ├── motor_chunks.py           ← Motor CHUNKS (+30k filas)
+  │                                Bloques adaptativos por RAM disponible
   │
-  ├── validaciones_fiscales.py  ← Reglas + fórmulas auditables
-  ├── generador_reporte.py      ← Reporte Excel + Dashboard HTML + DIOT
-  ├── seguridad.py              ← Privacidad y auditoría
+  ├── validaciones_fiscales.py  ← Reglas fiscales + fórmulas auditables
+  │                                Sets O(1): gasolina, dulces, insumos
+  │                                evaluar_deducibilidad_vectorizado()
   │
+  ├── generador_reporte.py      ← v2.3 — Reporte Excel + Dashboard HTML + DIOT
+  │                                Filtros · buscador · estatus editable
+  │                                Ctrl+V Excel · Ctrl+Z · exportar CSV
+  │                                localStorage · cruce CP01↔PPD 2 niveles
+  │                                Detección dinámica de régimen
+  │
+  ├── seguridad.py              ← Privacidad LFPDPPP + auditoría SHA-256
+  │                                ConfiguracionSeguridad · LogAuditoria
+  │                                Modo anonimización · logs_auditoria/
+  │
+  ├── docs/
+  │   ├── MASTER-PLAN.md        ← Estado del proyecto y próximos pasos
+  │   └── superpowers/
+  │       └── specs/            ← Especificaciones técnicas
+  │
+  ├── logs_auditoria/           ← Logs SHA-256 por sesión (auto-generados)
   ├── requirements.txt          ← pip install -r requirements.txt
   └── README.md                 ← Este archivo
 ```
@@ -251,7 +283,7 @@ ReaDesF1.9/
 | v1.6 | Optimizaciones Nivel 1-3 | `iter_rows`, sets de palabras clave, cache, regex precompilado |
 | v1.7 | Adaptive Processing — 2 motores | Selección automática entre openpyxl y pandas |
 | v1.8 | 3 Motores + Vectorización + Chunks | Motor chunks para +30k filas, masks vectorizadas, fórmulas auditables |
-| **v1.9** ⭐ | **Reporte + Dashboard + DIOT** | Asistente Gráfico (Tkinter), Dashboard HTML (`#` index, `Ctrl+V` Excel, colores), DIOT auto |
+| **v1.9** ⭐ | **Reporte + Dashboard + DIOT + GUI Sinergia REA** | Asistente Gráfico rediseñado: ventana centrada, dropdowns MES/AÑO, preview tiempo real, feedback verde, diálogos de marca (aviso/confirmación/resultado), cero `messagebox` nativos |
 
 ---
 
@@ -268,6 +300,12 @@ ReaDesF1.9/
 - [x] Forma 99 PPD → PENDIENTE (correcto SAT)
 - [x] Interfaz gráfica unificada con Tkinter en `main.py`
 - [x] Funciones avanzadas UI: columna index (`#`), colores corporativos, y pegado masivo desde Excel
+- [x] **GUI Sinergia REA** — ventana centrada (`withdraw/deiconify`), sin parpadeos
+- [x] **Dropdowns MES/AÑO** — ENERO–DICIEMBRE y 2020–2026 con lista desplegable nativa
+- [x] **Preview de periodo** en tiempo real (`📅 MARZO 2026`)
+- [x] **Feedback verde** en card de archivo al seleccionar Excel
+- [x] **Diálogos de marca**: aviso ⚠️ amarillo, confirmación 🔐 SÍ/NO, resultado ✅/❌
+- [x] **Cero `messagebox` nativos** — todos los diálogos usan GUI propia Sinergia REA
 
 ### 🟡 Corto plazo — v2.0
 - [ ] `configuracion.py` externo — sin hardcodear rutas ni límites
@@ -284,6 +322,21 @@ ReaDesF1.9/
 - [ ] Versión despachos
 - [ ] Actualizaciones automáticas
 - [ ] Multiusuario
+
+---
+
+## 10B · Seguridad y Privacidad — `seguridad.py`
+
+| Función | Detalle |
+|---|---|
+| `ConfiguracionSeguridad` | Control de anonimización, log y advertencias |
+| `LogAuditoria` | Registro por sesión en `logs_auditoria/` |
+| Hash SHA-256 | Cada archivo procesado queda firmado digitalmente |
+| Modo anonimización | Sufijo `_ANONIMIZADO_validado` en salida |
+| LFPDPPP | Confirmación de privacidad antes de procesar |
+| 100% local | Ningún dato fiscal sale de la computadora |
+
+Los logs se guardan como `auditoria_YYYYMMDD_HHMMSS.log` e incluyen: timestamp, evento (INICIO/FIN/ERROR), ruta del archivo, hash SHA-256, motor usado, filas procesadas y tiempo total.
 
 ---
 

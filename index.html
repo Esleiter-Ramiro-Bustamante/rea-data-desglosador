@@ -719,30 +719,31 @@
 
     <div class="step">
       <div class="step-num">3</div>
-      <div class="step-icon">▶️</div>
-      <div class="step-title">Seleccionar carpeta y archivo</div>
+      <div class="step-icon">🪟</div>
+      <div class="step-title">Asistente Gráfico Sinergia REA</div>
       <div class="step-desc">
-        El Asistente Gráfico te guiará para localizar tu carpeta y tu archivo <span class="step-accent">sin .xlsx</span>.
-        <br><div class="step-cmd">GASTOS FEBRERO</div>
+        Se abre la ventana de la GUI centrada en pantalla con diseño de marca completo:
+        header <span class="step-accent">SINERGIA REA</span> con separador tricolor rosa/amarillo/azul.
       </div>
     </div>
 
     <div class="step">
       <div class="step-num">4</div>
-      <div class="step-icon">🖥️</div>
-      <div class="step-title">Análisis automático</div>
+      <div class="step-icon">📂</div>
+      <div class="step-title">Seleccionar archivo Excel</div>
       <div class="step-desc">
-        El programa mide tu <span class="step-accent">RAM</span> y el tamaño del archivo y elige el mejor motor sin que hagas nada.
+        Presiona <span class="step-accent">BUSCAR ARCHIVO</span>. La caja se pone <span class="step-accent" style="color:#16A34A">verde</span> al confirmar la selección.
+        <br><div class="step-cmd">GASTOS_FEBRERO.xlsx</div>
       </div>
     </div>
 
     <div class="step">
       <div class="step-num">5</div>
-      <div class="step-icon">📝</div>
-      <div class="step-title">Indica el mes del reporte</div>
+      <div class="step-icon">🗓️</div>
+      <div class="step-title">Seleccionar periodo</div>
       <div class="step-desc">
-        Selecciona el mes y año desde los menús desplegables de la ventana:
-        <br><div class="step-cmd">FEBRERO 2026</div>
+        Usa los menús desplegables <span class="step-accent">MES</span> y <span class="step-accent">AÑO</span> (2020–2026). La ventana muestra un preview en tiempo real:
+        <br><div class="step-cmd">📅  FEBRERO  2026</div>
       </div>
     </div>
 
@@ -756,6 +757,60 @@
         <span class="step-accent">NOMBRE_reporte.xlsx</span> · tabla auditable<br>
         <span class="step-accent">NOMBRE_reporte.html</span> · dashboard interactivo
       </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══════════════════════════════════════════
+     GUI
+══════════════════════════════════════════ -->
+<section class="reveal">
+  <div class="section-label">01B &nbsp; INTERFAZ GRÁFICA</div>
+  <h2 class="section-title">Asistente<br><span style="color:var(--rosa)">Sinergia REA</span></h2>
+
+  <div class="highlight">
+    <p>La GUI fue completamente rediseñada con la identidad visual de <strong>Sinergia REA</strong>. Todos los diálogos, confirmaciones y mensajes del sistema usan el mismo diseño de marca — sin ventanas genéricas del sistema operativo.</p>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;margin-top:32px;">
+
+    <div class="card">
+      <div style="font-size:28px;margin-bottom:10px">🪟</div>
+      <div style="font-family:'Bebas Neue';font-size:20px;color:var(--amarillo);margin-bottom:8px">Ventana centrada</div>
+      <div style="font-size:14px;opacity:.8;line-height:1.6">Se abre perfectamente centrada en pantalla usando <code>withdraw → build → deiconify</code>. Sin saltos ni parpadeos al iniciar.</div>
+    </div>
+
+    <div class="card">
+      <div style="font-size:28px;margin-bottom:10px">🗓️</div>
+      <div style="font-family:'Bebas Neue';font-size:20px;color:var(--amarillo);margin-bottom:8px">Dropdowns MES / AÑO</div>
+      <div style="font-size:14px;opacity:.8;line-height:1.6">Listas desplegables nativas con todos los meses (ENERO–DICIEMBRE) y años (2020–2026). Preview en tiempo real: <code>📅 MARZO 2026</code></div>
+    </div>
+
+    <div class="card">
+      <div style="font-size:28px;margin-bottom:10px">🟢</div>
+      <div style="font-family:'Bebas Neue';font-size:20px;color:var(--amarillo);margin-bottom:8px">Feedback visual</div>
+      <div style="font-size:14px;opacity:.8;line-height:1.6">La card de archivo cambia de gris a <span style="color:#16A34A;font-weight:700">verde</span> al seleccionar el Excel. Confirmación visual inmediata sin necesidad de texto extra.</div>
+    </div>
+
+    <div class="card">
+      <div style="font-size:28px;margin-bottom:10px">🔔</div>
+      <div style="font-family:'Bebas Neue';font-size:20px;color:var(--amarillo);margin-bottom:8px">Diálogos de marca</div>
+      <div style="font-size:14px;opacity:.8;line-height:1.6">Todos los mensajes del sistema (aviso, confirmación, resultado) usan el header Sinergia REA con separador tricolor. Botones SÍ verde / NO rosa / ACEPTAR amarillo.</div>
+    </div>
+
+    <div class="card">
+      <div style="font-size:28px;margin-bottom:10px">✅</div>
+      <div style="font-family:'Bebas Neue';font-size:20px;color:var(--amarillo);margin-bottom:8px">Proceso Terminado</div>
+      <div style="font-size:14px;opacity:.8;line-height:1.6">La ventana final muestra resumen con ícono ✅ verde (éxito) o ❌ rojo (error), filas procesadas, tiempo total y botón ACEPTAR amarillo.</div>
+    </div>
+
+    <div class="card">
+      <div style="font-size:28px;margin-bottom:10px">🔐</div>
+      <div style="font-family:'Bebas Neue';font-size:20px;color:var(--amarillo);margin-bottom:8px">Log de auditoría</div>
+      <div style="font-size:14px;opacity:.8;line-height:1.6">Checkbox con ícono 🔒 y descripción secundaria: <em>"Registro local de operaciones — sin envío de datos"</em>. Activado por defecto.</div>
     </div>
 
   </div>
@@ -988,6 +1043,89 @@
       <div class="motor-speed" style="color:var(--rosa-soft)">Multiplataforma · Pegado desde Excel · Interfaz Gráfica (Tkinter) principal</div>
     </div>
 
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══════════════════════════════════════════
+     GENERADOR REPORTE
+══════════════════════════════════════════ -->
+<section class="reveal">
+  <div class="section-label">04B &nbsp; GENERADOR DE REPORTE</div>
+  <h2 class="section-title">Dashboard<br><span style="color:var(--rosa)">interactivo v2.3</span></h2>
+
+  <div class="highlight">
+    <p><strong>generador_reporte.py v2.3</strong> lee el <code>_validado.xlsx</code> y genera dos archivos: el reporte Excel auditable y un dashboard HTML completo con funciones avanzadas de edición, filtrado, búsqueda y exportación.</p>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px;margin-top:32px;">
+
+    <div class="card">
+      <div style="font-size:28px;margin-bottom:10px">🔍</div>
+      <div style="font-family:'Bebas Neue';font-size:20px;color:var(--amarillo);margin-bottom:8px">Buscador en tiempo real</div>
+      <div style="font-size:14px;opacity:.8;line-height:1.6">Busca por UUID, razón social, RFC o cualquier campo. DataTables con índice correlativo <code>#</code> en cada fila.</div>
+    </div>
+
+    <div class="card">
+      <div style="font-size:28px;margin-bottom:10px">🎛️</div>
+      <div style="font-family:'Bebas Neue';font-size:20px;color:var(--amarillo);margin-bottom:8px">Filtros por estatus</div>
+      <div style="font-size:14px;opacity:.8;line-height:1.6">Botones: <strong>DED · EFE · NO DED · PEND · EGRESO · CP01</strong>. También por tipo de IVA: 16% · 16Y0% · 0%.</div>
+    </div>
+
+    <div class="card">
+      <div style="font-size:28px;margin-bottom:10px">✏️</div>
+      <div style="font-family:'Bebas Neue';font-size:20px;color:var(--amarillo);margin-bottom:8px">Estatus editable</div>
+      <div style="font-size:14px;opacity:.8;line-height:1.6">Haz clic en cualquier celda de observaciones para editarla directamente. Los cambios se guardan automáticamente con <code>localStorage</code>.</div>
+    </div>
+
+    <div class="card">
+      <div style="font-size:28px;margin-bottom:10px">📋</div>
+      <div style="font-family:'Bebas Neue';font-size:20px;color:var(--amarillo);margin-bottom:8px">Pegado masivo desde Excel</div>
+      <div style="font-size:14px;opacity:.8;line-height:1.6">Copia celdas de Excel y pega con <kbd>Ctrl+V</kbd> directamente en el dashboard. Soporta <kbd>Ctrl+Z</kbd> para deshacer el pegado.</div>
+    </div>
+
+    <div class="card">
+      <div style="font-size:28px;margin-bottom:10px">⬇️</div>
+      <div style="font-family:'Bebas Neue';font-size:20px;color:var(--amarillo);margin-bottom:8px">Exportar cambios CSV</div>
+      <div style="font-size:14px;opacity:.8;line-height:1.6">Botón <strong>EXPORTAR CAMBIOS</strong> descarga un CSV de respaldo con todos los cambios manuales realizados en la sesión.</div>
+    </div>
+
+    <div class="card">
+      <div style="font-size:28px;margin-bottom:10px">💾</div>
+      <div style="font-family:'Bebas Neue';font-size:20px;color:var(--amarillo);margin-bottom:8px">Persistencia localStorage</div>
+      <div style="font-size:14px;opacity:.8;line-height:1.6">Los cambios manuales sobreviven al recargar la página. Se guardan por UUID en el navegador sin servidor ni base de datos.</div>
+    </div>
+
+    <div class="card">
+      <div style="font-size:28px;margin-bottom:10px">🎨</div>
+      <div style="font-family:'Bebas Neue';font-size:20px;color:var(--amarillo);margin-bottom:8px">Colores por estatus</div>
+      <div style="font-size:14px;opacity:.8;line-height:1.6">🟩 DED 16% · 🟦 DED 16Y0% · 🟨 DED 0% · 🟥 NO DED · 🟣 CP01 · ⬜ PENDIENTE · 🟪 EGRESO</div>
+    </div>
+
+    <div class="card">
+      <div style="font-size:28px;margin-bottom:10px">🔗</div>
+      <div style="font-family:'Bebas Neue';font-size:20px;color:var(--amarillo);margin-bottom:8px">Cruce CP01 ↔ PPD</div>
+      <div style="font-size:14px;opacity:.8;line-height:1.6">Cruce Nivel 1 por UUID explícito. Cruce Nivel 2 por RFC + total cuando el UUID relacionado viene vacío. Extrae UUID de columna COMENTARIOS automáticamente.</div>
+    </div>
+
+    <div class="card">
+      <div style="font-size:28px;margin-bottom:10px">🏢</div>
+      <div style="font-family:'Bebas Neue';font-size:20px;color:var(--amarillo);margin-bottom:8px">Detección de régimen</div>
+      <div style="font-size:14px;opacity:.8;line-height:1.6">Detecta dinámicamente el régimen dominante del cliente (612 / 626 / otros) y adapta las reglas de deducibilidad y el nombre del reporte.</div>
+    </div>
+
+  </div>
+
+  <div style="margin-top:28px;">
+    <div class="highlight">
+      <strong>Tarjetas resumen del Dashboard:</strong><br><br>
+      <span style="color:var(--amarillo)">●</span> <strong>DEDUCIBLES</strong> — total de facturas DED + EFE con monto acumulado<br>
+      <span style="color:var(--rosa)">●</span> <strong>NO DEDUCIBLES</strong> — facturas NO DED con monto<br>
+      <span style="color:var(--azul-soft)">●</span> <strong>PENDIENTES</strong> — PPD sin complemento CP01 recibido<br>
+      <span style="color:#9C27B0">●</span> <strong>COMPLEMENTOS CP01</strong> — pagos cruzados detectados<br>
+      <span style="color:#4CAF50">●</span> <strong>TOTAL GENERAL</strong> — suma de todas las facturas del periodo
+    </div>
   </div>
 </section>
 
@@ -1244,13 +1382,21 @@
 
     <div class="timeline-item current" style="border-color:var(--amarillo)">
       <div class="tv-ver" style="color:var(--amarillo)">v1.9 — ACTUAL ⭐</div>
-      <div class="tv-title">Reporte + Dashboard HTML + DIOT + Fórmulas Cacheadas</div>
+      <div class="tv-title">Reporte + Dashboard HTML + DIOT + Fórmulas Cacheadas + GUI Rediseñada</div>
       <div class="tv-desc">
-        <strong>generador_reporte.py</strong> — nuevo módulo que genera 3 archivos desde el _validado.
-        Dashboard HTML interactivo con filtros, buscador, estatus editable y localStorage.
-        DIOT automática agrupada por RFC. Cruce CP01↔PPD por RFC+total.
-        Fórmulas auditables con valor numérico cacheado en el XML — Python las lee sin depender de Excel.
-        Fix SUB0% gasolina con IEPS sin duplicar. Forma 99 PPD → PENDIENTE correcto SAT.
+        <strong>generador_reporte.py v2.3</strong> — genera reporte Excel auditable + dashboard HTML interactivo.
+        Filtros por estatus (DED·EFE·NO DED·PEND·EGRESO·CP01), buscador en tiempo real, columna índice (#).
+        Estatus editable con clic, pegado masivo desde Excel (Ctrl+V) con deshacer (Ctrl+Z).
+        Exportar cambios CSV. Persistencia con localStorage por UUID. Colores por tipo de IVA y estatus.<br>
+        DIOT automática agrupada por RFC — actualización en tiempo real al cambiar estatus.
+        Cruce CP01↔PPD Nivel 1 (UUID) y Nivel 2 (RFC+total). UUID extraído de columna COMENTARIOS.
+        Fórmulas auditables cacheadas en XML. Fix SUB0% gasolina sin duplicar IEPS. Forma 99 → PENDIENTE SAT.
+        Detección dinámica de régimen dominante (612/626/otros).<br><br>
+        <strong>GUI Sinergia REA completa:</strong> Ventana centrada (withdraw/deiconify).
+        Dropdowns MES (ENERO–DICIEMBRE) y AÑO (2020–2026) con preview en tiempo real.
+        Feedback verde en card de archivo. Todos los diálogos (aviso ⚠️, confirmación 🔐 SÍ/NO, resultado ✅/❌)
+        con header SINERGIA REA y separador tricolor. Cero messagebox nativos del sistema operativo.
+        <code>seguridad.py</code>: log de auditoría SHA-256, LFPDPPP, modo anonimización.
       </div>
     </div>
 
