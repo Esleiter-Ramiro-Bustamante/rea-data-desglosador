@@ -47,6 +47,23 @@ USO_CFDI_VERDE       = "G02 - Devoluciones, descuentos o bonificaciones"
 LIMITE_EFECTIVO      = 2000.0      # Art. 27 Fracc. III LISR
 
 # ══════════════════════════════════════════════════════════════════
+# CLAVES DE DEDUCCIÓN PERSONAL — Art. 147 LISR (CFDI 4.0)
+# Aplica SOLO para Régimen 612 cuando comprobante tiene estas claves
+# ══════════════════════════════════════════════════════════════════
+CLAVES_DEDUCCION_PERSONAL = {
+    'D01',  # Honorarios médicos, dentales y gastos hospitalarios
+    'D02',  # Gastos médicos por incapacidad o discapacidad
+    'D03',  # Gastos funerarios
+    'D04',  # Donativos
+    'D05',  # Intereses reales efectivamente pagados por créditos hipotecarios (casa habitación)
+    'D06',  # Aportaciones voluntarias al SAR (retiro)
+    'D07',  # Primas por seguros de gastos médicos
+    'D08',  # Gastos de transportación escolar obligatoria
+    'D09',  # Depósitos en cuentas de ahorro especiales para el retiro
+    'D10',  # Pagos por servicios educativos (colegiaturas)
+}
+
+# ══════════════════════════════════════════════════════════════════
 # SETS DE PALABRAS CLAVE — búsqueda O(1)
 # ══════════════════════════════════════════════════════════════════
 
@@ -191,6 +208,35 @@ def detectar_tipo(concepto_lower: str) -> tuple:
 
 def es_gasolina_agrupada(concepto_lower: str) -> bool:
     return '|' in concepto_lower
+
+def detectar_deduccion_personal(conceptos: str) -> bool:
+    """
+    Detecta si el concepto contiene claves de deducción personal (D01-D10).
+    Estas claves corresponden al Art. 147 LISR (Deducciones Personales).
+    
+    Args:
+        conceptos: String con descripción/conceptos del CFDI
+        
+    Returns:
+        True si contiene alguna clave D01-D10, False en caso contrario
+    """
+    if not conceptos:
+        return False
+    
+    conceptos_upper = str(conceptos).upper()
+    
+    # Buscar cualquiera de las claves de deducción personal
+    for clave in CLAVES_DEDUCCION_PERSONAL:
+        # Buscar la clave como palabra completa o precedida por separador común
+        # Ej: "D01", " D01", "-D01", "|D01"
+        if clave in conceptos_upper:
+            # Validar que sea la clave completa, no parte de otro código
+            # Por ejemplo, evitar que "CD01" sea detectado como "D01"
+            import re
+            if re.search(r'(\s|^|[|,;-])' + clave + r'(\s|$|[|,;.\)])', conceptos_upper):
+                return True
+    
+    return False
 
 def extraer_codigo(value) -> str:
     if value and '-' in str(value):

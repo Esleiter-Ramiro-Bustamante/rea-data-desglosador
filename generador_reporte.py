@@ -30,6 +30,9 @@ METODOS_VALIDOS = {'PUE', 'PPD'}
 FORMAS_VALIDAS  = {'01', '02', '03', '04', '28'}
 LIMITE_EFECTIVO = 2000.0
 
+# Claves de Deducción Personal (Art. 147 LISR - CFDI 4.0)
+CLAVES_DEDUCCION_PERSONAL = {'D01','D02','D03','D04','D05','D06','D07','D08','D09','D10'}
+
 _RE_UUID_FULL  = re.compile(
     r'[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}',
     re.IGNORECASE
@@ -42,6 +45,36 @@ def extraer_codigo(val, n=3):
     if '-' in s:
         return s.split('-')[0].strip()[:n].upper()
     return s[:n].upper()
+
+def detectar_deduccion_personal(conceptos: str, regimen: str = '612') -> bool:
+    """
+    Detecta si el concepto contiene claves de deducción personal (D01-D10).
+    Solo aplica para Régimen 612.
+    
+    Args:
+        conceptos: String con descripción/conceptos del CFDI
+        regimen: Código de régimen (solo detecta si es 612)
+        
+    Returns:
+        True si es régimen 612 y contiene clave D01-D10
+    """
+    # Solo aplica para régimen 612
+    if regimen != '612':
+        return False
+    
+    if not conceptos:
+        return False
+    
+    conceptos_upper = str(conceptos).upper()
+    
+    # Buscar cualquiera de las claves de deducción personal
+    for clave in CLAVES_DEDUCCION_PERSONAL:
+        if clave in conceptos_upper:
+            # Validar que sea la clave completa con separadores
+            if re.search(r'(\s|^|[|,;-])' + clave + r'(\s|$|[|,;.\)])', conceptos_upper):
+                return True
+    
+    return False
 
 def safe_str(v):
     return str(v).strip() if v is not None else ''
@@ -70,6 +103,7 @@ def classify(estatus):
     eu = estatus.upper()
     is_efe = 'EFE' in eu
     if 'COMPLEMENTO' in eu: return ('D5C6E0','4A0080','complemento','complemento')
+    if 'DED PERSONAL' in eu: return ('B4E7B4','0B6623','ded-personal','ded-personal')
     if '16 Y 0'      in eu: return ('BDD7EE','1F497D','mix',  'efe160' if is_efe else 'ded160')
     if '16%'         in eu: return ('C6EFCE','1B5E20','ded16','efe16' if is_efe else 'ded16')
     if '0%'          in eu: return ('FFF3CD','856404','ded0', 'efe0' if is_efe else 'ded0')
@@ -101,7 +135,20 @@ def leer_validado(path):
                 return v
         return None
 
-    i_uuid      = gc('uuid') or gc('folio fiscal')
+    # ── BÚSQUEDA ROBUSTA DE UUID ──────────────────────────────────
+    # Intenta múltiples variantes para encontrar UUID
+    i_uuid = None
+    for variant in ['uuid', 'folio fiscal', 'folio', 'id cfdi']:
+        i_uuid = gc(variant)
+        if i_uuid is not None:
+            print(f'  ✅ UUID encontrado como: "{variant.upper()}"')
+            break
+    
+    if i_uuid is None:
+        print(f'  ⚠️  ADVERTENCIA: Columna UUID NO encontrada')
+        print(f'  📋 Columnas disponibles: {", ".join(hraw.values())}')
+        i_uuid = None  # Permitir continuar pero sin UUID
+    
     i_uuid_rel  = gc('uuids relacionados') or gc('uuid relacionado') or gc('folio fiscal relacionado')
     i_fecha     = gc('fecha certificacion') or gc('fecha emision') or gc('fecha')
     i_razon_em  = gc('razon emisor') or gc('nombre emisor') or gc('razon social')
@@ -355,6 +402,13 @@ def calc_estatus(f, is_cp, ppd_pend, idx_razones):
     forma = f.get('forma', ''); total  = f.get('total', 0)
     sub2  = f.get('sub2', 0);  iva16  = f.get('iva16', 0)
     sub0  = f.get('sub0', 0)
+    regimen = f.get('regimen', '')
+    conceptos = f.get('conceptos', '')
+
+    # ── DETECCIÓN DE DEDUCCIÓN PERSONAL (D01-D10) ──────────────────
+    # Si está en régimen 612 y tiene claves D01-D10 → DED PERSONAL
+    if detectar_deduccion_personal(conceptos, extraer_codigo(regimen)):
+        return 'DED PERSONAL'
 
     u  = extraer_codigo(uso)
     m  = extraer_codigo(metodo)
@@ -456,7 +510,7 @@ def generar_excel(filas, ppd_pend, cp01_a_ppd, idx_razones, out, mes='', reg_cod
     sh.row_dimensions[RH].height = 34
     sh.freeze_panes = 'A%d' % (RH+1)
 
-    stats = {k:0 for k in ['total','ded','no_ded','pend','egreso','efe','comp',
+    stats = {k:0 for k in ['total','ded','ded_personal','no_ded','pend','egreso','efe','comp',
                              'monto_ded','monto_no_ded','monto_pend']}
     ppd_norms = {norm_uuid(p) for p in ppd_pend}
 
@@ -479,13 +533,14 @@ def generar_excel(filas, ppd_pend, cp01_a_ppd, idx_razones, out, mes='', reg_cod
             obs = ''
 
         stats['total'] += 1
-        if   'COMPLEMENTO' in eu: stats['comp']   += 1
-        elif 'PENDIENTE'   in eu: stats['pend']   += 1; stats['monto_pend']   += f['total']
+        if   'COMPLEMENTO' in eu: stats['comp']      += 1
+        elif 'PENDIENTE'   in eu: stats['pend']      += 1; stats['monto_pend']   += f['total']
+        elif 'DED PERSONAL' in eu: stats['ded_personal'] += 1; stats['monto_ded'] += f['total']
         elif 'NO DED' in eu or 'ERROR' in eu:
-                                   stats['no_ded']+= 1; stats['monto_no_ded'] += f['total']
-        elif 'EGRESO'      in eu: stats['egreso'] += 1
-        elif 'EFE'         in eu: stats['efe']    += 1; stats['monto_ded']    += f['total']
-        else:                      stats['ded']   += 1; stats['monto_ded']    += f['total']
+                                   stats['no_ded']   += 1; stats['monto_no_ded'] += f['total']
+        elif 'EGRESO'      in eu: stats['egreso']    += 1
+        elif 'EFE'         in eu: stats['efe']       += 1; stats['monto_ded']    += f['total']
+        else:                      stats['ded']      += 1; stats['monto_ded']    += f['total']
 
         # CP01 → amarillo en _validado (igual que imagen de referencia)
         if is_cp:
@@ -537,7 +592,7 @@ def generar_excel(filas, ppd_pend, cp01_a_ppd, idx_razones, out, mes='', reg_cod
 
 
 _OPCIONES = [
-    'DED 16%','DED 0%','DED 16 Y 0%','EFE 16%','EFE 0%','EFE 16 Y 0%',
+    'DED 16%','DED 0%','DED 16 Y 0%','DED PERSONAL','EFE 16%','EFE 0%','EFE 16 Y 0%',
     'EGRESO','NO DEDUCIBLE','NO DEDUCIBLE: Efectivo >= $2,000','PENDIENTE','COMPLEMENTO',
     'OTRO MES', 'MES ANTERIOR'
 ]
