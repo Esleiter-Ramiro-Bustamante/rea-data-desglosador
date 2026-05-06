@@ -1,0 +1,420 @@
+/* ── Variables de color ───────────────────────────────────────── */
+:root {
+  --rs: #FF2D78; --am: #FFD600; --az: #0057FF;
+  --fo: #F4F4F8; --ca: #FFF;    --fa: #F7F8FC; --bo: #E0E0E8;
+  --tx: #1A1A2E; --ts: #5A5A6E;
+  --vr: #16A34A; --rj: #DC2626; --am2: #B8860B;
+}
+*, *::before, *::after { box-sizing: border-box; }
+body { background: var(--fo); color: var(--tx); font-family: 'Outfit', 'DM Sans', sans-serif; }
+
+/* ── Header ───────────────────────────────────────────────────── */
+.hd { background:linear-gradient(135deg,#1C1C28,#222230); padding:22px 40px;
+      border-bottom:3px solid transparent;
+      border-image:linear-gradient(90deg,var(--rs),var(--am),var(--az)) 1; }
+.ht { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; }
+.lg { font-family:'Bebas Neue',sans-serif; font-size:42px; letter-spacing:3px; line-height:1; }
+.lg .r { color:var(--rs); } .lg .d { color:#E0E0DC; } .lg .f { color:var(--am); }
+.lg .v { font-size:13px; color:#3D8BFF; margin-left:6px; vertical-align:middle; }
+.hm { font-size:12px; color:#8E8E9A; text-align:right; line-height:1.8;
+      font-family:'JetBrains Mono',monospace; }
+.hm strong { color:var(--am); font-size:13px; }
+
+/* ── Puntos deducibles ────────────────────────────────────────── */
+.ps { display:flex; gap:14px; padding:10px 40px;
+      background:rgba(22,163,74,0.04); border-bottom:1px solid var(--bo);
+      align-items:center; flex-wrap:wrap; }
+.pl { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--ts); letter-spacing:2px; }
+.pv { background:rgba(22,163,74,0.1); color:var(--vr); padding:4px 13px;
+      border-radius:4px; font-family:'JetBrains Mono',monospace; font-size:11px;
+      font-weight:700; border:1px solid rgba(22,163,74,0.2); }
+
+/* ── Grid de Cards ────────────────────────────────────────────── */
+.cards-section { padding: 28px 40px 8px; }
+
+/* ── Card base premium ────────────────────────────────────────── */
+.cd {
+  background: #ffffff;
+  border-radius: 16px;
+  border: none;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04);
+  position: relative;
+  overflow: hidden;
+  transition: transform .22s cubic-bezier(.4,0,.2,1), box-shadow .22s;
+  min-height: 130px;
+}
+.cd::before {
+  content: '';
+  display: block;
+  height: 4px;
+  width: 100%;
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  border-radius: 16px 16px 0 0;
+}
+.cd:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 36px rgba(0,0,0,0.13), 0 2px 8px rgba(0,0,0,0.06);
+}
+
+/* ── Variantes de color (barra superior) ──────────────────────── */
+.cd1::before  { background: linear-gradient(90deg, var(--vr), #34d399); }
+.cd2::before  { background: linear-gradient(90deg, var(--rj), #f87171); }
+.cd3::before  { background: linear-gradient(90deg, #94a3b8, #cbd5e1); }
+.cd4::before  { background: linear-gradient(90deg, var(--am), #fde68a); }
+.cd5::before  { background: linear-gradient(90deg, #E68A00, #fbbf24); }
+.cd-az::before { background: linear-gradient(90deg, var(--az), #60a5fa); }
+
+/* ── Ícono decorativo de fondo ────────────────────────────────── */
+.cd-ico {
+  position: absolute;
+  bottom: -8px; right: 10px;
+  font-size: 72px;
+  opacity: 0.055;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+  filter: grayscale(0.3);
+}
+
+/* ── Contenido de la card ─────────────────────────────────────── */
+.cd-body {
+  padding: 20px 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  height: 100%;
+}
+
+/* ── Etiqueta superior ────────────────────────────────────────── */
+.cl {
+  font-size: 10px;
+  font-family: 'Outfit', 'JetBrains Mono', monospace;
+  font-weight: 600;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: var(--ts);
+  margin-bottom: 4px;
+  margin-top: 4px;
+}
+
+/* ── Número principal ─────────────────────────────────────────── */
+.cn {
+  font-family: 'Outfit', 'Bebas Neue', sans-serif;
+  font-size: 44px;
+  font-weight: 800;
+  color: var(--tx);
+  line-height: 1;
+  letter-spacing: -1px;
+  margin: 0;
+}
+
+/* ── Monto secundario ─────────────────────────────────────────── */
+.cm {
+  font-family: 'Outfit', 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--am2);
+  margin-top: 6px;
+  letter-spacing: 0.3px;
+}
+
+/* ── Card clickeable (DIOT) ───────────────────────────────────── */
+.cd-click { cursor: pointer; }
+.cd-click:hover {
+  box-shadow: 0 12px 36px rgba(184,134,11,0.18);
+}
+.cd-click.diot-open::before {
+  background: linear-gradient(90deg, var(--am), #fde68a);
+}
+.diot-ico {
+  font-size: 8px; color: var(--am); letter-spacing: 1px;
+  font-family: 'JetBrains Mono', monospace; margin-left: 4px;
+  opacity: .7;
+}
+
+/* ── Sección colapsable desglose EFE / DED ────────────────────── */
+.desglose-toggle {
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 40px 10px;
+  cursor: pointer; user-select: none;
+}
+.desglose-toggle .dt-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; color: var(--ts); letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.desglose-toggle .dt-arrow {
+  font-size: 11px; color: var(--rs);
+  transition: transform .25s; display: inline-block;
+}
+.desglose-toggle .dt-line {
+  flex: 1; height: 1px; background: var(--bo);
+}
+.desglose-wrap {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height .35s cubic-bezier(.4,0,.2,1), opacity .3s;
+  opacity: 0;
+}
+.desglose-wrap.open {
+  max-height: 400px;
+  opacity: 1;
+}
+.desglose-wrap.open ~ .desglose-toggle .dt-arrow {
+  transform: rotate(180deg);
+}
+/* Cards mini dentro del desglose */
+.cd-mini {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  padding: 14px 16px 12px;
+  position: relative;
+  overflow: hidden;
+  min-height: 90px;
+}
+.cd-mini::before {
+  content: ''; display: block; height: 3px;
+  position: absolute; top: 0; left: 0; right: 0;
+  border-radius: 12px 12px 0 0;
+}
+.cd-mini.efe::before  { background: linear-gradient(90deg, #E68A00, #fbbf24); }
+.cd-mini.ded::before  { background: linear-gradient(90deg, var(--vr), #34d399); }
+.cd-mini-label {
+  font-family: 'Outfit', monospace; font-size: 9px;
+  font-weight: 700; letter-spacing: 1.8px;
+  text-transform: uppercase; color: var(--ts);
+  margin-bottom: 4px; margin-top: 2px;
+}
+.cd-mini-num {
+  font-family: 'Outfit', sans-serif; font-size: 20px;
+  font-weight: 800; color: var(--tx); line-height: 1;
+}
+.cd-mini-sub {
+  font-size: 10px; color: var(--ts); margin-top: 3px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.desglose-group-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; color: var(--ts); letter-spacing: 2px;
+  text-transform: uppercase; padding: 4px 0 6px;
+}
+
+/* ── Leyenda de colores ───────────────────────────────────────── */
+.leyenda { display:flex; gap:8px; padding:10px 40px 14px; flex-wrap:wrap; align-items:center; }
+.ley-tit { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--ts); letter-spacing:2px; }
+.ley-item { display:flex; align-items:center; gap:5px; font-size:10px;
+            font-family:'JetBrains Mono',monospace; color:var(--ts); }
+.ley-dot { width:14px; height:14px; border-radius:3px; border:1px solid rgba(0,0,0,0.15); }
+
+/* ── Botones de filtro ────────────────────────────────────────── */
+.fls { padding:0 40px 14px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.fll { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--ts); letter-spacing:2px; }
+.bf  { padding:7px 15px; border:1px solid var(--bo); border-radius:5px;
+       background:transparent; color:var(--ts); font-size:11px;
+       font-family:'JetBrains Mono',monospace; cursor:pointer; transition:all .2s; white-space:nowrap; }
+.bf:hover { border-color:var(--rs); color:var(--rs); }
+.bf.ac    { background:var(--rs); border-color:var(--rs); color:#fff; }
+.bdd.ac   { background:var(--vr);  border-color:var(--vr);  color:#fff; }
+.bdo.ac   { background:var(--am);  border-color:var(--am);  color:#fff; }
+.bmix.ac  { background:var(--az);  border-color:var(--az);  color:#fff; }
+.bno.ac   { background:var(--rj);  border-color:var(--rj);  color:#fff; }
+.bpp.ac   { background:#666;       border-color:#666;        color:#fff; }
+.bef.ac   { background:#E68A00;    border-color:#E68A00;     color:#fff; }
+.beg.ac   { background:#7B1FA2;    border-color:#7B1FA2;     color:#fff; }
+.bcp.ac   { background:#4A0080;    border-color:#4A0080;     color:#fff; }
+.breset   { border-color:#999; color:#999; margin-left:8px; }
+.breset:hover { border-color:var(--rj); color:var(--rj); }
+
+/* ── Buscador personalizado ───────────────────────────────────── */
+.bw { padding:0 40px 16px; }
+.bq { width:100%; max-width:480px; padding:10px 16px; background:#FFF;
+      border:1px solid #D0D0D8; border-radius:6px; color:var(--tx); font-size:13px; outline:none; }
+.bq:focus { border-color:var(--rs); box-shadow:0 0 0 3px rgba(255,45,120,0.08); }
+
+/* ── Tabla ────────────────────────────────────────────────────── */
+.tw { padding:0 40px 40px; }
+table.dataTable { font-size:12px; }
+table.dataTable thead th {
+  background:linear-gradient(180deg,#24242E,#1C1C26) !important;
+  color:var(--am) !important; padding:11px 8px; text-align:center;
+  font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.8px;
+  border-bottom:2px solid var(--rs) !important; white-space:nowrap;
+}
+table.dataTable tbody td { padding:9px 8px; border-bottom:1px solid var(--bo); vertical-align:middle; }
+table.dataTable tbody tr:nth-child(even) { background:var(--fa); }
+table.dataTable tbody tr:hover { background:rgba(255,45,120,0.04) !important; }
+
+/* ── Celdas específicas ───────────────────────────────────────── */
+.nx  { text-align:center; font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:var(--tx); border-right:1px solid var(--bo); background:var(--ca); }
+.uu  { font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:var(--tx); word-break:break-all; }
+.fd  { font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:var(--tx); white-space:nowrap; text-align:center; }
+.rz  { font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:var(--tx); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:140px; }
+.nm  { text-align:right; }
+.tt  { font-weight:700; color:var(--am2); text-align:right;
+       font-family:'JetBrains Mono',monospace; white-space:nowrap; }
+.tot-formula { display:block; font-size:8px; color:var(--ts);
+               font-weight:400; opacity:0.7; margin-top:2px;
+               font-family:'JetBrains Mono',monospace; }
+.mt  { font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:var(--tx); max-width:150px;
+       white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ec  { font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:var(--tx); text-align:center; }
+.ob  { font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:var(--tx); max-width:320px; }
+
+/* ── Input editable de montos ─────────────────────────────────── */
+.ip { background:transparent; border:1px solid transparent; color:var(--tx);
+      font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700;
+      text-align:right; width:90px; padding:4px 5px; border-radius:4px; }
+.ip:hover { border-color:#ccc; }
+.ip:focus { border-color:#3D8BFF; background:rgba(0,87,255,0.04); outline:none; }
+
+/* ── Select de estatus ────────────────────────────────────────── */
+.se           { padding:6px 10px; border-radius:5px; font-size:10px;
+                font-family:'JetBrains Mono',monospace; font-weight:700;
+                border:none; cursor:pointer; min-width:155px; }
+.se.ded16     { background:#C6EFCE; color:#1B5E20; }
+.se.ded0      { background:#FFF3CD; color:#856404; }
+.se.mix       { background:#BDD7EE; color:#1F497D; }
+.se.egreso    { background:#E2CFED; color:#6A1B9A; }
+.se.pendiente { background:#E0E0E0; color:#37474F; }
+.se.complemento { background:#D5C6E0; color:#4A0080; }
+.se.no-ded    { background:#FFC7CE; color:#9C0006; }
+.se.changed   { box-shadow:0 0 0 2px var(--am); }
+
+/* ── Etiquetas OBS ────────────────────────────────────────────── */
+.cb { display:inline-block; padding:3px 8px; border-radius:3px;
+      font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700;
+      background:rgba(74,0,128,0.08); color:#7B1FA2;
+      border:1px solid rgba(74,0,128,0.15); cursor:text; }
+.pb { display:inline-block; padding:3px 8px; border-radius:3px;
+      font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700;
+      background:rgba(255,214,0,0.08); color:var(--am2);
+      border:1px solid rgba(255,214,0,0.2); cursor:text; }
+.ob-txt { font-size:10px; color:var(--ts); cursor:text; }
+[contenteditable]:focus { outline:1px dashed #3D8BFF; border-radius:2px; padding:2px; }
+
+/* ── Filas complemento / oculto ──────────────────────────────── */
+.fc, .fc:nth-child(even) { background:rgba(213,198,224,0.15) !important; }
+.oculto { display:none !important; }
+
+/* ── Controles DataTables ─────────────────────────────────────── */
+.dataTables_wrapper .dataTables_filter { display:none !important; }
+.dataTables_wrapper .dataTables_length select {
+  border:1px solid var(--bo); border-radius:4px; padding:4px 8px; }
+.dataTables_info, .dataTables_paginate {
+  font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ts); margin-top:12px; }
+.paginate_button {
+  padding:4px 10px !important; border:1px solid var(--bo) !important;
+  border-radius:4px !important; margin:0 2px !important; cursor:pointer; }
+.paginate_button.current {
+  background:var(--rs) !important; color:#fff !important; border-color:var(--rs) !important; }
+.paginate_button:hover:not(.current) {
+  background:rgba(255,45,120,0.08) !important; border-color:var(--rs) !important; }
+/* Filas de DataTables — respetar colores del reporte */
+table.dataTable { border-collapse: collapse; width:100%; font-size:12px; }
+table.dataTable thead th {
+  background:linear-gradient(180deg,#24242E,#1C1C26) !important;
+  color:var(--am) !important; padding:11px 8px; text-align:center;
+  font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.8px;
+  border-bottom:2px solid var(--rs) !important; white-space:nowrap;
+  border-top:none !important;
+}
+table.dataTable tbody td {
+  padding:9px 8px; border-bottom:1px solid var(--bo); vertical-align:middle;
+  background:inherit !important;
+}
+table.dataTable tbody tr { background:inherit !important; }
+table.dataTable tbody tr:hover td { background:rgba(255,45,120,0.04) !important; }
+
+
+/* ── DIOT ─────────────────────────────────────────────────────── */
+.diot-wrap { padding:0 40px 30px; }
+.diot-hdr  { display:flex; align-items:center; gap:12px;
+             background:linear-gradient(135deg,#2C2C1E,#3A3A28);
+             padding:14px 24px; border-radius:8px 8px 0 0;
+             border-left:4px solid var(--am); }
+.diot-dash  { color:var(--am); font-size:20px; font-weight:700; }
+.diot-title { font-family:'Bebas Neue',sans-serif; font-size:20px;
+              letter-spacing:2px; color:var(--am); }
+.diot-mes   { font-family:'JetBrains Mono',monospace; font-size:11px;
+              color:#8E8E6A; margin-left:auto; }
+.diot-tw    { overflow-x:auto; border-radius:0 0 8px 8px;
+              box-shadow:0 4px 16px rgba(0,0,0,0.10); }
+.diot-tbl   { width:100%; border-collapse:collapse; font-size:12px; }
+.diot-tbl thead th {
+  background:linear-gradient(180deg,#24242E,#1C1C26);
+  color:var(--am); padding:10px 14px; text-align:center;
+  font-family:'JetBrains Mono',monospace; font-size:10px;
+  letter-spacing:0.8px; border-bottom:2px solid var(--am);
+  white-space:nowrap;
+}
+.diot-tbl thead th:first-child,
+.diot-tbl thead th:nth-child(2) { text-align:left; }
+.diot-row   { background:#FAFAF5; }
+.diot-alt   { background:#F3F3EC; }
+.diot-row:hover, .diot-alt:hover { background:rgba(184,134,11,0.06) !important; }
+.diot-rs    { padding:9px 14px; font-size:11px; font-weight:500; color:var(--tx); }
+.diot-rfc   { padding:9px 14px; font-family:'JetBrains Mono',monospace;
+              font-size:10px; color:var(--ts); }
+.diot-num   { padding:9px 14px; text-align:right;
+              font-family:'JetBrains Mono',monospace; font-size:11px;
+              color:var(--tx); border-left:1px solid var(--bo); }
+.diot-tot   { padding:9px 14px; text-align:right;
+              font-family:'JetBrains Mono',monospace; font-size:11px;
+              font-weight:700; color:var(--am2);
+              border-left:1px solid var(--bo); }
+.diot-totrow { background:linear-gradient(135deg,#1C1C28,#222230); }
+.diot-totrow td { border-top:2px solid var(--am); }
+.diot-tl    { padding:10px 14px; font-family:'JetBrains Mono',monospace;
+              font-size:11px; font-weight:700; color:var(--am);
+              letter-spacing:2px; }
+
+/* ── Footer ───────────────────────────────────────────────────── */
+footer { padding:28px 40px; border-top:1px solid var(--bo);
+         display:flex; justify-content:space-between; align-items:center;
+         flex-wrap:wrap; gap:16px; background:linear-gradient(180deg,#1C1C28,#12121A); }
+.fl2     { font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:4px; color:#E0E0DC; }
+.fl2 .r  { color:var(--rs); }
+.fl2 .f  { color:var(--am); }
+.fi      { font-family:'JetBrains Mono',monospace; font-size:10px; color:#8E8E9A;
+           text-align:right; line-height:1.9; opacity:.65; }
+
+/* ── Extras (Nomina & Depreciacion) y Estatus Nuevos ──────────── */
+.se.otro-mes  { background:#E8EAF6; color:#283593; }
+.se.mes-ant   { background:#CFD8DC; color:#263238; }
+
+.ext-wrap { padding:0 40px 40px; display:flex; flex-direction:column; gap:24px; }
+.ext-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 28px 28px 20px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04);
+  border-top: 4px solid var(--rs);
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow .22s;
+}
+.ext-card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--rs), #ff8fb8);
+  border-radius: 16px 16px 0 0;
+}
+.ext-card.depr { border-top-color: var(--az); }
+.ext-card.depr::after { background: linear-gradient(90deg, var(--az), #60a5fa); }
+.ext-card:hover { box-shadow: 0 12px 36px rgba(0,0,0,0.10); }
+.ext-tt { font-family:'Outfit','Bebas Neue',sans-serif; font-size:22px; font-weight:700; color:var(--tx); margin-bottom:16px; letter-spacing:0.5px; }
+.ext-tbl-wrap { overflow-x:auto; }
+.ext-tbl { width:100%; border-collapse:collapse; min-width:1100px; }
+.ext-tbl th { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--ts); border-bottom:1px solid var(--bo); padding:8px; text-align:left; white-space:nowrap; }
+.ext-tbl td { border-bottom:1px solid var(--bo); padding:8px; }
+.ext-ip { border:none; outline:none; font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:var(--tx); background:transparent; width:100%; }
+.ext-ip:focus { border-bottom:1px solid rgba(255,255,255,0.2); }
+.ext-btn { margin-top:16px; background:rgba(255,45,120,0.1); color:var(--rs); border:none; padding:8px 16px; border-radius:4px; font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; cursor:pointer; transition:all .2s;}
+.ext-btn:hover { background:var(--rs); color:#fff; }
+.ext-del { background:none; border:none; color:var(--rj); cursor:pointer; font-weight:bold; font-size:16px; opacity:0.6; padding:0 4px; border-radius:4px;}
+.ext-del:hover { background:rgba(255,0,0,0.1); opacity:1; }
+.ext-tot-row td { padding:12px 8px; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:12px; color:var(--tx); border-top:2px solid var(--bo); }
