@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Reporte Fiscal {mes} - ReaDesF1.9</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700;800;900&family=DM+Sans:wght@300;400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<link rel="stylesheet" href="{css_name}">
+</head><body>
+<div class="hd"><div class="ht">
+  <div class="lg"><span class="r">Rea</span><span class="d">Des</span><span class="f">F</span><span class="v">1.9</span></div>
+  <div class="hm"><strong>REPORTE FISCAL - REGIMEN {reg_cod}</strong><br>{reg_nombre} . {mes}<br>Generado: {now}</div>
+</div></div>
+<div class="ps"><span class="pl">PUNTOS DEDUCIBLES:</span><span class="pv">PUE</span><span class="pv">01, 02, 03, 28</span><span class="pv">G01 Y G03</span></div>
+<div class="cards-section">
+  <div class="row g-3">
+    <div class="col-xl col-lg-3 col-md-4 col-sm-6">
+      <div class="cd cd1 h-100">
+        <div class="cd-ico">📋</div>
+        <div class="cd-body">
+          <span class="cl" style="color:var(--vr)">GASTOS AL 16%</span>
+          <span class="cn" id="cnt-tot16">—</span>
+          <span class="cm" id="mnt-tot16">—</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl col-lg-3 col-md-4 col-sm-6">
+      <div class="cd cd4 h-100">
+        <div class="cd-ico">🌾</div>
+        <div class="cd-body">
+          <span class="cl" style="color:var(--am)">GASTOS AL 0%</span>
+          <span class="cn" id="cnt-tot0">—</span>
+          <span class="cm" id="mnt-tot0">—</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl col-lg-3 col-md-4 col-sm-6">
+      <div class="cd cd-az h-100">
+        <div class="cd-ico">🏦</div>
+        <div class="cd-body">
+          <span class="cl" style="color:var(--az)">IVA ACREDITABLE</span>
+          <span class="cn" style="font-size:32px" id="mnt-iva-acred">—</span>
+          <span class="cm" style="color:var(--az);opacity:.7">Solo facturas deducibles</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl col-lg-3 col-md-4 col-sm-6">
+      <div class="cd cd5 h-100">
+        <div class="cd-ico">💵</div>
+        <div class="cd-body">
+          <span class="cl" style="color:#E68A00">EFECTIVO</span>
+          <span class="cn" id="cnt-efe">—</span>
+          <span class="cm" id="mnt-efe">—</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl col-lg-3 col-md-4 col-sm-6">
+      <div class="cd cd2 h-100">
+        <div class="cd-ico">🚫</div>
+        <div class="cd-body">
+          <span class="cl" style="color:var(--rj)">NO DEDUCIBLES</span>
+          <span class="cn" id="cnt-nod">—</span>
+          <span class="cm" id="mnt-nod">—</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl col-lg-3 col-md-4 col-sm-6">
+      <div class="cd cd3 h-100">
+        <div class="cd-ico">⏳</div>
+        <div class="cd-body">
+          <span class="cl" style="color:var(--ts)">PENDIENTES</span>
+          <span class="cn" id="cnt-pen">—</span>
+          <span class="cm" id="mnt-pen">—</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl col-lg-3 col-md-4 col-sm-6">
+      <div class="cd cd3 h-100">
+        <div class="cd-ico">🧾</div>
+        <div class="cd-body">
+          <span class="cl" style="color:var(--ts)">TOTAL FACTURAS</span>
+          <span class="cn" id="cnt-tot">{tf}</span>
+          <span class="cm">Este mes</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl col-lg-3 col-md-4 col-sm-6">
+      <div class="cd cd4 cd-click h-100" onclick="toggleDiot(this)" title="Abrir Proveedores DIOT"
+           style="background:linear-gradient(145deg,#1C1C28,#2A2A3A);">
+        <div class="cd-ico" style="opacity:0.12;">📋</div>
+        <div class="cd-body">
+          <span class="cl" style="color:var(--am)">VER</span>
+          <span class="cn" style="color:#fff;font-size:36px;letter-spacing:1px">DIOT</span>
+          <span class="cm" style="color:#8E8E9A">Proveedores</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl col-lg-3 col-md-4 col-sm-6">
+      <div class="cd h-100" style="background:linear-gradient(135deg,#1C1C28,#2e1a47);border-radius:16px;">
+        <div class="cd-ico" style="opacity:0.13;">💎</div>
+        <div class="cd-body">
+          <span class="cl" style="color:var(--rs);letter-spacing:2px">GRAN TOTAL</span>
+          <span class="cn" style="color:#fff;font-size:28px;letter-spacing:-0.5px" id="mnt-gran-total">—</span>
+          <span class="cm" style="color:#8E8E9A;font-size:10px">Sub16% + Sub0% + IVA16%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="desglose-toggle" onclick="toggleDesglose()" id="desglose-btn">
+  <span class="dt-label">▸ Desglose por tipo de pago</span>
+  <span class="dt-line"></span>
+  <span class="dt-arrow" id="desglose-arrow">▼</span>
+</div>
+<div class="desglose-wrap" id="desglose-wrap">
+  <div class="cards-section" style="padding-top:4px;padding-bottom:16px;">
+    <div class="row g-2">
+      <div class="col-12"><span class="desglose-group-label">💵 EFECTIVO — sobre subtotal</span></div>
+      <div class="col-xl col-lg-4 col-md-4 col-sm-6">
+        <div class="cd-mini efe">
+          <span class="cd-mini-label" style="color:#E68A00">EFE · SUB 16%</span>
+          <div class="cd-mini-num" id="mnt-efe16">—</div>
+          <div class="cd-mini-sub">Subtotal gravado 16%</div>
+        </div>
+      </div>
+      <div class="col-xl col-lg-4 col-md-4 col-sm-6">
+        <div class="cd-mini efe">
+          <span class="cd-mini-label" style="color:#E68A00">EFE · IVA 16%</span>
+          <div class="cd-mini-num" id="mnt-efe16-iva">—</div>
+          <div class="cd-mini-sub">IVA acreditable efectivo</div>
+        </div>
+      </div>
+      <div class="col-xl col-lg-4 col-md-4 col-sm-6">
+        <div class="cd-mini efe">
+          <span class="cd-mini-label" style="color:#E68A00">EFE · SUB 0%</span>
+          <div class="cd-mini-num" id="mnt-efe0">—</div>
+          <div class="cd-mini-sub">Subtotal gravado 0%</div>
+        </div>
+      </div>
+      <div class="col-12 mt-2"><span class="desglose-group-label">💳 TRANSFERENCIA / TARJETA — sobre subtotal</span></div>
+      <div class="col-xl col-lg-4 col-md-4 col-sm-6">
+        <div class="cd-mini ded">
+          <span class="cd-mini-label" style="color:var(--vr)">DED · SUB 16%</span>
+          <div class="cd-mini-num" id="mnt-ded16">—</div>
+          <div class="cd-mini-sub">Subtotal gravado 16%</div>
+        </div>
+      </div>
+      <div class="col-xl col-lg-4 col-md-4 col-sm-6">
+        <div class="cd-mini ded">
+          <span class="cd-mini-label" style="color:var(--vr)">DED · IVA 16%</span>
+          <div class="cd-mini-num" id="mnt-ded16-iva">—</div>
+          <div class="cd-mini-sub">IVA acreditable transferencia</div>
+        </div>
+      </div>
+      <div class="col-xl col-lg-4 col-md-4 col-sm-6">
+        <div class="cd-mini ded">
+          <span class="cd-mini-label" style="color:var(--vr)">DED · SUB 0%</span>
+          <div class="cd-mini-num" id="mnt-ded0">—</div>
+          <div class="cd-mini-sub">Subtotal gravado 0%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="leyenda"><span class="ley-tit">COLORES:</span>
+  <span class="ley-item"><span class="ley-dot" style="background:#C6EFCE"></span>DED/EFE 16%</span>
+  <span class="ley-item"><span class="ley-dot" style="background:#BDD7EE"></span>16 Y 0%</span>
+  <span class="ley-item"><span class="ley-dot" style="background:#FFF3CD"></span>0%</span>
+  <span class="ley-item"><span class="ley-dot" style="background:#E2CFED"></span>EGRESO</span>
+  <span class="ley-item"><span class="ley-dot" style="background:#D5C6E0"></span>COMPLEMENTO</span>
+  <span class="ley-item"><span class="ley-dot" style="background:#E0E0E0"></span>PENDIENTE</span>
+  <span class="ley-item"><span class="ley-dot" style="background:#FFC7CE"></span>NO DEDUCIBLE</span>
+</div>
+<div class="fls"><span class="fll">FILTRAR:</span>
+  <button class="bf ac"  onclick="ft('todos',this)">TODOS ({tf})</button>
+  <button class="bf bdd" onclick="ft('ded16',this)">DED 16% (...)</button>
+  <button class="bf bdo" onclick="ft('ded0',this)">DED 0% (...)</button>
+  <button class="bf bmix" onclick="ft('ded160',this)">16 Y 0% (...)</button>
+  <button class="bf bef" onclick="ft('efe',this)">EFE (...)</button>
+  <button class="bf bno" onclick="ft('no-ded',this)">NO DED (...)</button>
+  <button class="bf bpp" onclick="ft('pendiente',this)">PEND (...)</button>
+  <button class="bf beg" onclick="ft('egreso',this)">EGRESO (...)</button>
+  <button class="bf bcp" onclick="ft('complemento',this)">CP01 (...)</button>
+  <button class="bf breset" onclick="limpiarCambios()" title="Borrar cambios manuales y volver al original">↺ LIMPIAR</button>
+  <button class="bf breset" onclick="exportarCambiosCSV()" title="Descargar cambios manuales como CSV de respaldo" style="border-color:#1976D2;color:#1976D2">⬇ EXPORTAR CAMBIOS</button>
+</div>
+<div class="bw"><input id="bq-custom" class="bq" type="search" placeholder="Buscar por UUID, razon social, monto..."></div>
+<div id="diot-section" style="display:none">{diot_html}</div>
+<div class="tw"><table id="tbl" class="display" style="width:100%">
+  <thead><tr><th>#</th><th>FOLIO FISCAL</th><th>UUID REL.</th><th>FECHA</th><th>RAZON SOCIAL</th>
+    <th>SUBTOTAL 16%</th><th>IVA 16%</th><th>SUB 0%</th><th>TOTAL</th>
+    <th>METODO</th><th>FORMA PAGO</th><th>USO CFDI</th><th>ESTATUS</th><th>COMPLEMENTOS / OBS</th>
+  </tr></thead>
+  <tbody>{fs}</tbody>
+</table></div>
+<div class="ext-wrap">
+  <div class="ext-card">
+    <div class="ext-tt">NÓMINAS {mes}</div>
+    <div class="ext-tbl-wrap"><table class="ext-tbl" id="tbl-nom">
+      <thead><tr><th>FOLIO FISCAL</th><th>FECHA</th><th>RAZÓN SOCIAL</th><th>SUELDO</th><th>ISR/ISPT</th><th>IMSS</th><th>TOTAL</th><th>USO CFDI</th><th>ESTATUS</th><th></th></tr></thead>
+      <tbody><tr><td><input class="ext-ip" style="width:180px"></td><td><input class="ext-ip" style="width:70px"></td><td><input class="ext-ip" style="width:140px"></td><td><input class="ext-ip num-nom" style="color:var(--am);width:70px"></td><td><input class="ext-ip num-nom" style="color:var(--rs);width:70px"></td><td><input class="ext-ip num-nom" style="color:var(--vr);width:70px"></td><td><input class="ext-ip num-nom" style="width:70px;background:rgba(255,255,255,0.05);padding:4px"></td><td><input class="ext-ip" style="width:60px"></td><td><input class="ext-ip" style="width:80px"></td><td style="width:30px;text-align:center"><button class="ext-del" onclick="delExtRow(this, 'tbl-nom')" title="Eliminar fila">×</button></td></tr></tbody>
+      <tfoot><tr class="ext-tot-row"><td colspan="3" style="text-align:right;color:var(--am)">TOTALES:</td><td id="tot-nom-sueldo">$0.00</td><td id="tot-nom-isr">$0.00</td><td id="tot-nom-imss">$0.00</td><td id="tot-nom-total" style="color:var(--am2)">$0.00</td><td colspan="3"></td></tr></tfoot>
+    </table></div>
+    <button class="ext-btn" onclick="addExtRow('tbl-nom')">+ AGREGAR FILA</button>
+  </div>
+  <div class="ext-card depr">
+    <div class="ext-tt" style="color:var(--az)">DEPRECIACIONES {mes}</div>
+    <div class="ext-tbl-wrap"><table class="ext-tbl" id="tbl-dep">
+      <thead><tr><th>CUENTA</th><th>FECHA</th><th>NOMBRE</th><th>TOTAL</th><th></th></tr></thead>
+      <tbody><tr><td><input class="ext-ip" style="width:110px"></td><td><input class="ext-ip" style="width:70px"></td><td><input class="ext-ip" style="width:250px"></td><td><input class="ext-ip num-dep" style="color:var(--am2);width:90px;background:rgba(255,255,255,0.05);padding:4px"></td><td style="width:30px;text-align:center"><button class="ext-del" onclick="delExtRow(this, 'tbl-dep')" title="Eliminar fila">×</button></td></tr></tbody>
+      <tfoot><tr class="ext-tot-row"><td colspan="3" style="text-align:right;color:var(--az)">TOTALES:</td><td id="tot-dep-total" style="color:var(--am2)">$0.00</td><td></td></tr></tfoot>
+    </table></div>
+    <button class="ext-btn" style="color:var(--az);background:rgba(0,87,255,0.1)" onclick="addExtRow('tbl-dep')">+ AGREGAR FILA</button>
+  </div>
+</div>
+<footer>
+  <div class="fl2"><span class="r">Rea</span>Des<span class="f">F</span></div>
+  <div class="fi">Sinergia REA . ReaDesF1.9 . Mexico 2026<br>Regimen {reg_cod} . {reg_nombre}<br>{nd2} deducibles . {nn} no deducibles . {np} pendientes</div>
+</footer>
+<script src="{js_name}"></script>
+
+<template id="tpl-row">
+<tr class="fr {flt}{fc_cls}" data-est="{flt}" data-rfc="{rfc}" data-uuid="{uuid_full}"><td class="nx">{i}</td><td class="uu" title="{uuid_full}">{uuid_disp}</td><td class="uu" title="{uuid_rel}">{rel_disp}</td><td class="fd">{fecha_str}</td><td class="rz" title="{razon_em}">{razon_em}</td><td class="nm"><input type="text" class="ip" style="color:var(--az)" value="{sub2}" oninput="rc(this)"></td><td class="nm"><input type="text" class="ip" style="color:var(--rs)" value="{iva16}" oninput="rc(this)"></td><td class="nm"><input type="text" class="ip" style="color:var(--vr)" value="{sub0}" oninput="rc(this)"></td><td class="tt" title="SUB2 + IVA16 + SUB0 = TOTAL"><b class="tot-val">{total}</b><span class="tot-formula"></span></td><td class="mt">{metodo}</td><td class="mt">{forma}</td><td class="mt">{uso}</td><td class="ec">{sel}</td><td class="ob">{obs_html}</td></tr>
+</template>
+
+<template id="tpl-diot-row">
+<tr class="diot-row{alt}"><td class="diot-rs">{razon}</td><td class="diot-rfc">{rfc}</td><td class="diot-num">{sub2}</td><td class="diot-num">{iva16}</td><td class="diot-num">{sub0}</td><td class="diot-tot">{total}</td></tr>
+</template>
+
+<template id="tpl-diot-totrow">
+<tr class="diot-totrow"><td colspan="2" class="diot-tl">TOTALES</td><td class="diot-tot">{tot_sub2}</td><td class="diot-tot">{tot_iva16}</td><td class="diot-tot">{tot_sub0}</td><td class="diot-tot">{tot_total}</td></tr>
+</template>
+
+<template id="tpl-diot-wrap">
+<div class="diot-wrap">
+  <div class="diot-hdr">
+    <span class="diot-dash">—</span>
+    <span class="diot-title">Informativa de operaciones con terceros (DIOT)</span>
+    <span class="diot-mes">{mes}</span>
+  </div>
+  <div class="diot-tw">
+  <table class="diot-tbl">
+    <thead><tr><th>RAZÓN SOCIAL</th><th>RFC</th><th>ACT. PAGADAS 16%</th><th>IVA PAGADO</th><th>ACT. PAGADO TASA 0%</th><th>TOTAL</th></tr></thead>
+    <tbody>{rows}</tbody>
+  </table>
+  </div>
+</div>
+</template>
+</body></html>
